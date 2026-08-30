@@ -26,6 +26,7 @@ export default async function MovementDetail({
   const d = await withSession(me, async (c) => {
     const m = (await c.query(`
       select m.*, src.code as source_code, dst.code as dest_code, p.name as partner_name,
+             m.self_approved,
              raiser.full_name as raised_by_name, appr.full_name as approved_by_name,
              recv.full_name as received_by_name, reso.full_name as resolved_by_name
         from movement.movement m
@@ -158,7 +159,17 @@ export default async function MovementDetail({
       {/* ── actions ── */}
       {canAct && m.status === "DRAFT" && (
         <Section title="Approve">
-          {isRaiser ? (
+          {isRaiser && me.role === "admin" ? (
+            <Notice tone="warn" title="You raised this ticket.">
+              Normally somebody else would approve it. As the single administrator you
+              may approve your own — and the ticket will be permanently marked as having
+              had no second pair of eyes.
+              <form action={approveMovement} className="mt-3">
+                <input type="hidden" name="id" value={m.id} />
+                <button type="submit" className="btn">Approve anyway</button>
+              </form>
+            </Notice>
+          ) : isRaiser ? (
             <Notice tone="bad" title="You raised this ticket.">
               Someone else has to approve it. Try anyway — the refusal comes from the
               database, not this page.
@@ -346,6 +357,16 @@ export default async function MovementDetail({
             </tbody>
           </TableWrap>
         </Section>
+      )}
+
+      {m.self_approved && (
+        <Notice tone="warn" title="Approved by the person who raised it.">
+          Separation of duties was not applied here — nobody else reviewed this before it
+          went ahead. Permitted because this business has a single administrator, and
+          recorded so that it stays visible. The day a second person can approve, turn{" "}
+          <span className="mono">admin_may_self_approve</span> off and this stops being
+          possible.
+        </Notice>
       )}
 
       <p className="meta mt-6">
