@@ -119,6 +119,25 @@ const refiled = await c.query(`
    returning 1`);
 if (refiled.rowCount > 0) console.log(`• ${refiled.rowCount} products re-filed from old categories`);
 
+// ── and correct anything the coarse mapping got wrong ──
+//
+// Migration 0052 maps five old names onto five new ones. That is right
+// for fourteen of the fifteen products that existed, and wrong for
+// Refined Sunflower Oil 1L, which was filed under Staples and belongs
+// in Oil, Ghee & Masala — a blanket rename cannot know that, because
+// the old category genuinely held both.
+//
+// This list knows, by name. Only products IN it are touched: anything
+// added by hand keeps whatever category somebody chose for it.
+let moved = 0;
+for (const p of PRODUCTS) {
+  const { rowCount } = await c.query(
+    `update catalog.product set category = $2
+      where name = $1 and category is distinct from $2`, [p.name, p.category]);
+  moved += rowCount;
+}
+if (moved > 0) console.log(`• ${moved} products moved to the aisle this list puts them in`);
+
 // ── prices and pack sizes ──
 //
 // pack_size is always corrected; a price is only SET where none
