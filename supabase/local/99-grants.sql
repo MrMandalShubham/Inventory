@@ -66,3 +66,57 @@ begin
   -- nobody notices has started granting somewhere new.
   raise notice 'granted authenticated access to: %', array_to_string(granted, ', ');
 end $$;
+
+-- ── and take back the ones no application role may ever call ──
+--
+-- The blanket `grant execute on all functions` above is right for
+-- almost everything: our functions check their own role and scope, so
+-- reaching them is harmless.
+--
+-- A few are different. platform.open_session_for() mints a valid
+-- session for ANY user id without a password — it exists so the server
+-- can log in an administrator it authenticated from the environment.
+-- Granted to `authenticated`, it is complete privilege escalation: any
+-- signed-in operator calls it and becomes an admin.
+--
+-- Migration 0044 revoked it. This file then granted it straight back,
+-- because it runs AFTER every migration. The revoke was written, the
+-- comment claimed it was the security boundary, and it was undone
+-- four lines later — caught only because a probe asserted an operator
+-- could NOT call it.
+--
+-- So the revoke lives here, at the end, where nothing follows it. And
+-- it is DISCOVERED rather than listed: a function declares itself
+-- server-only in its own body, exactly as it declares
+-- @no-scope-check, so the marker cannot drift away from the function
+-- it describes. A hardcoded list has rotted twice in this codebase
+-- already.
+do $$
+declare
+  f       record;
+  revoked text[] := '{}';
+begin
+  for f in
+    select n.nspname as schema_name,
+           p.proname  as name,
+           pg_get_function_identity_arguments(p.oid) as args
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname not like 'pg\_%'
+       and n.nspname not in ('information_schema', 'public', 'extensions')
+       and p.prosrc like '%@server-only%'
+  loop
+    execute format('revoke execute on function %I.%I(%s) from authenticated',
+                   f.schema_name, f.name, f.args);
+    execute format('revoke execute on function %I.%I(%s) from public',
+                   f.schema_name, f.name, f.args);
+    if exists (select 1 from pg_roles where rolname = 'anon') then
+      execute format('revoke execute on function %I.%I(%s) from anon',
+                     f.schema_name, f.name, f.args);
+    end if;
+    revoked := revoked || format('%s.%s', f.schema_name, f.name);
+  end loop;
+
+  raise notice 'server-only, revoked from authenticated: %',
+    coalesce(array_to_string(revoked, ', '), 'none');
+end $$;

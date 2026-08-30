@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { withoutSession } from "@/lib/db";
 import { SESSION_COOKIE, currentSession } from "@/lib/session";
+import { signInEnvAdmin, envAdmin } from "@/lib/env-admin";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,22 @@ async function signIn(formData: FormData) {
 
   let token: string, expires: Date;
   try {
+    // The configured administrator first. Returns null when these are
+    // not their credentials, so an ordinary user falls straight
+    // through to the database — the two doors are indistinguishable
+    // from the outside, including on failure.
+    const fromEnv = await signInEnvAdmin(email, password, "web");
+    if (fromEnv) {
+      (await cookies()).set(SESSION_COOKIE, fromEnv.token, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        expires: fromEnv.expiresAt,
+        path: "/",
+      });
+      redirect(next);
+    }
+
     const row = await withoutSession(async (c) => {
       const { rows } = await c.query("select * from platform.sign_in($1,$2,$3)",
         [email, password, "web"]);
@@ -101,11 +118,20 @@ export default async function Login({
           </form>
         </div>
 
+        {envAdmin() && (
+          <div className="notice notice-info mt-4 text-[13px]">
+            <b>Administrator sign-in.</b> The single administrator is configured in the
+            environment as <span className="mono">{envAdmin()!.email}</span>. Everyone
+            else signs in against the database.
+          </div>
+        )}
+
         <div className="notice notice-info mt-4 text-[13px]">
-          <b>Demo data.</b> Password for everyone is <span className="mono">inventory</span>.
-          Try <span className="mono">arun@example.com</span> (operator, one shop) against{" "}
-          <span className="mono">admin@example.com</span> and watch the data change —
-          the database refuses what a role may not see, rather than a page hiding it.
+          <b>Demo data.</b> Password for the seeded users is{" "}
+          <span className="mono">inventory</span>. Try{" "}
+          <span className="mono">arun@example.com</span> (operator, one shop) against the
+          administrator and watch the data change — the database refuses what a role may
+          not see, rather than a page hiding it.
         </div>
       </div>
     </main>

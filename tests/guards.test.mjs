@@ -234,3 +234,53 @@ describe("Guard: search-path", () => {
     }
   });
 });
+
+describe("Guard: server-only", () => {
+  test("catches a server-only function an application role can call", async () => {
+    const c = await connect();
+    try {
+      // Exactly the hole that existed: migration 0044 revoked EXECUTE,
+      // 99-grants.sql granted it straight back, and nothing noticed.
+      await c.query(`create function platform.skeleton_key(a int) returns int
+                     language sql security definer as $$
+                       -- @server-only: mints trust from nothing
+                       select a $$`);
+      await c.query("grant execute on function platform.skeleton_key(int) to authenticated");
+
+      const violations = await runCheck("server-only");
+      const caught = violations.find((v) => v.function_name === "skeleton_key");
+
+      assert.ok(caught, "a server-only function was reachable by authenticated and the guard missed it");
+      assert.equal(caught.violation, "SERVER_ONLY_FUNCTION_IS_EXECUTABLE");
+      assert.equal(caught.reachable_by, "authenticated");
+    } finally {
+      await c.query("drop function if exists platform.skeleton_key(int)").catch(() => {});
+      await c.end();
+    }
+  });
+
+  test("accepts it once EXECUTE is revoked", async () => {
+    const c = await connect();
+    try {
+      await c.query(`create function platform.skeleton_key2(a int) returns int
+                     language sql security definer as $$
+                       -- @server-only: mints trust from nothing
+                       select a $$`);
+      await c.query("revoke execute on function platform.skeleton_key2(int) from public");
+      await c.query("revoke execute on function platform.skeleton_key2(int) from authenticated");
+
+      const violations = await runCheck("server-only");
+      assert.equal(violations.find((v) => v.function_name === "skeleton_key2"), undefined,
+        "a properly revoked function was reported as reachable");
+    } finally {
+      await c.query("drop function if exists platform.skeleton_key2(int)").catch(() => {});
+      await c.end();
+    }
+  });
+
+  test("the real server-only functions are unreachable after a full migrate", async () => {
+    const v = await runCheck("server-only");
+    assert.deepEqual(v, [],
+      v.map((x) => `  ${x.schema_name}.${x.function_name} reachable by ${x.reachable_by}`).join("\n"));
+  });
+});

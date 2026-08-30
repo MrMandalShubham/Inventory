@@ -160,6 +160,20 @@ ok("Supabase's own auth.jwt() is intact (shim not applied)",
    !!shim && shim.def.includes("request.jwt.claim"),
    shim ? "definition changed" : "auth.jwt() missing");
 
+// A server-only function reachable by an application role is total
+// privilege escalation — open_session_for() mints a session for any
+// user id with no password. This was actually broken: 0044 revoked it
+// and 99-grants.sql granted it straight back.
+const reachable = (await c.query(`
+  select n.nspname || '.' || p.proname as fn
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where p.prosrc like '%@server-only%'
+     and (has_function_privilege('authenticated', p.oid, 'EXECUTE')
+       or has_function_privilege('public', p.oid, 'EXECUTE'))`)).rows;
+ok("no server-only function is reachable by an application role",
+   reachable.length === 0,
+   reachable.map((r) => r.fn).join(", "));
+
 // every function can see the extensions schema
 const blind = (await c.query(`
   select count(*)::int n from pg_proc p

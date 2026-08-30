@@ -22,7 +22,8 @@
     "storage:check": "npx tsx scripts/storage-check.mjs",
     "db:verify": "npx tsx scripts/db-verify.mjs",
     "dev:supabase": "next dev --port 3100",
-    "db:jobs": "npx tsx scripts/schedule-jobs.mjs"
+    "db:jobs": "npx tsx scripts/schedule-jobs.mjs",
+    "user:password": "node scripts/set-password.mjs"
   },
   "dependencies": {
     "next": "^16.3.3",
