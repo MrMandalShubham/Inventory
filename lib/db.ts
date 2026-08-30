@@ -28,9 +28,24 @@ export const pool =
     connectionString: CONNECTION,
     ...(isLocal ? {} : { ssl: { rejectUnauthorized: false } }),
     // The API takes one connection per request; the 200-concurrent
-    // gate is the shape to size for. Supabase's Supavisor pooler
-    // multiplexes well beyond this in production.
-    max: 20,
+    // gate is the shape to size for.
+    //
+    // On a serverless host this number is PER INSTANCE, and Vercel
+    // will happily run dozens of them. Twenty each is a good way to
+    // exhaust Supavisor's tenant limit and start refusing connections
+    // under exactly the load the pool was sized for. A small pool per
+    // instance is right there: the pooler is what multiplexes, not us.
+    max: process.env.VERCEL ? 3 : 20,
+
+    // Serverless instances are frozen between requests and killed
+    // without warning. A connection held open across that is a
+    // connection the pooler is still counting.
+    idleTimeoutMillis: process.env.VERCEL ? 10_000 : 30_000,
+
+    // Fail fast enough that a misconfigured host surfaces as an error
+    // rather than as a request that eventually times out somewhere
+    // less informative.
+    connectionTimeoutMillis: 10_000,
   });
 
 if (process.env.NODE_ENV !== "production") globalForPg.pool = pool;

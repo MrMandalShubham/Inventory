@@ -53,6 +53,32 @@ async function signIn(formData: FormData) {
     if ((e as any)?.digest?.startsWith?.("NEXT_REDIRECT")) throw e;
 
     const raw = e instanceof Error ? e.message : String(e);
+
+    // ── "wrong password" and "no database" are not the same thing ──
+    //
+    // This used to answer "That email and password do not match" for
+    // every failure, including the database being unreachable. On a
+    // fresh Vercel deployment whose DATABASE_URL pointed at a hostname
+    // that does not resolve from a serverless function, that message
+    // sent somebody hunting for a password problem for as long as they
+    // believed it.
+    //
+    // Nothing about the environment is echoed back — the host, the
+    // driver and the error text stay in the server log. The reader is
+    // told which KIND of problem this is, which is what they need to
+    // know and all they need to know.
+    const unreachable =
+      /ENOTFOUND|ECONNREFUSED|ETIMEDOUT|ENETUNREACH|EAI_AGAIN|termination|timeout expired/i
+        .test(raw);
+
+    if (unreachable) {
+      console.error("[login] the database could not be reached:", raw);
+      redirect(`/login?error=${encodeURIComponent(
+        "The database could not be reached, so nothing could be checked. This is a " +
+        "configuration problem, not a wrong password — see the server logs."
+      )}&email=${encodeURIComponent(email)}`);
+    }
+
     const msg = raw.includes("ACCOUNT_LOCKED")
       ? "Too many attempts. Try again in a few minutes."
       : "That email and password do not match.";
