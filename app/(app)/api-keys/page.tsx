@@ -5,12 +5,20 @@ import { createKey, revokeKey } from "./actions";
 
 export const dynamic = "force-dynamic";
 
+// The scopes a key may hold, and what each one actually opens.
+//
+// This list is the ONLY way a key gets minted, so a scope missing here
+// is a scope nobody can grant. pricing:write and cost:read were added
+// by the storefront API and left out of this list, which meant the
+// price endpoints existed and no key on earth could call them.
 const SCOPES = [
-  ["catalog:read", "Read products, images and barcodes"],
-  ["catalog:write", "Add product images"],
-  ["stock:read", "Read stock, reservations and the ledger"],
+  ["catalog:read", "Read products, prices, images and barcodes"],
+  ["catalog:write", "Edit product name, description, category; add images"],
+  ["pricing:write", "Set retail, MRP and wholesale prices"],
+  ["stock:read", "Read stock, reservations, order status and the ledger"],
   ["reservations:write", "Hold, confirm, consume and release stock"],
   ["movements:read", "Read movement tickets"],
+  ["cost:read", "See landed cost — what you PAID. Never give this to a storefront."],
 ];
 
 export default async function ApiKeys({
@@ -163,11 +171,15 @@ export default async function ApiKeys({
             </div>
 
             <div className="notice notice-info" style={{ margin: "16px 0" }}>
-              Grant the narrowest set that works. A storefront needs{" "}
+              Grant the narrowest set that works. A selling app needs{" "}
+              <span className="mono">catalog:read</span>,{" "}
               <span className="mono">stock:read</span> and{" "}
               <span className="mono">reservations:write</span> — it has no business posting an
               adjustment, and a key that could would put stock changes outside every approval
-              in the system.
+              in the system. Add <span className="mono">pricing:write</span> only if that app
+              sets its own prices. Leave <span className="mono">cost:read</span> off: it
+              reveals what you paid, and a storefront that holds it publishes your margin to
+              anyone who opens devtools.
             </div>
 
             <button type="submit" className="btn">Mint key</button>

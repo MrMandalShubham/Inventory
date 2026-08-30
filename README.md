@@ -4,6 +4,8 @@ A system of record for stock — *how many, where, worth what* — served to any
 
 **Specification:** [`docs/`](docs/README.md) — nine documents. Read [09 — Product](docs/09-product.md) first.
 
+**Integrating a selling app?** [`docs/STOREFRONT-API.md`](docs/STOREFRONT-API.md) — the whole integration in one file: keys, endpoints, the order lifecycle, and a working Next.js client.
+
 ---
 
 ## Status

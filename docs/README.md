@@ -24,6 +24,12 @@ Start with 09, then 01 and 02. Documents 03–08 can be read in any order after 
 | **07** | [Evaluation and monitoring](07-evaluation-and-monitoring.md) | System, data and business health; the checks that page; continuous gate testing |
 | **08** | [Governance and safety](08-governance-and-safety.md) | Roles, location scoping, separation of duties, RLS enforcement, audit, compliance, incident response |
 
+## Integrating
+
+| Document | For |
+|---|---|
+| [Storefront API](STOREFRONT-API.md) | Anyone building an app that sells from this inventory. Self-contained — keys, endpoints, the reserve/commit/release lifecycle, prices, images, and a working Next.js client |
+
 ## The eight invariants
 
 Cited by number throughout. Full statements in [09 — Product](09-product.md) §5.
