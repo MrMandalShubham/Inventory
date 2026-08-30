@@ -125,6 +125,34 @@ try {
     "Floor Cleaner 1L": 11, "Steel Water Bottle 1L": 32000,
   };
 
+  // What the shop CHARGES, per PACK — not per gram. A customer buys a
+  // 1kg bag, not 1000 grams, so the storefront price is the price of
+  // the thing on the shelf and pack_size is what it says on it.
+  //
+  // Written out rather than derived from COST. Cost is a weighted
+  // average that moves with every delivery; a price derived from it
+  // would drift for reasons no customer can see. A price is a
+  // decision somebody holds.
+  //
+  //                              pack        retail  mrp   wholesale
+  const PRICE = {
+    "Toor Dal 1kg":              ["1 kg",       165,  180,  148],
+    "Basmati Rice 5kg":          ["5 kg",       640,  699,  575],
+    "Atta 10kg":                 ["10 kg",      445,  480,  399],
+    "Refined Sunflower Oil 1L":  ["1 L",        149,  165,  134],
+    "Full Cream Milk 500ml":     ["500 ml",      34,   35,   31],
+    "Curd 400g":                 ["400 g",       42,   45,   38],
+    "Paneer 200g":               ["200 g",       99,  110,   89],
+    "Tomatoes":                  ["1 kg",        40,   45,   35],
+    "Onions":                    ["1 kg",        38,   42,   33],
+    "Bananas":                   ["6 pcs",       55,   60,   48],
+    "Face Wash 100ml":           ["100 ml",     149,  175,  129],
+    "Shampoo 340ml":             ["340 ml",     299,  340,  259],
+    "Dishwash Bar 200g":         ["200 g",       25,   28,   22],
+    "Floor Cleaner 1L":          ["1 L",        185,  199,  159],
+    "Steel Water Bottle 1L":     ["1 L",        549,  699,  475],
+  };
+
   const products = [
     { name: "Toor Dal 1kg",           category: "Staples",     base_uom: "G",   barcode: "8901234500011", hsn_code: "0713" },
     { name: "Basmati Rice 5kg",       category: "Staples",     base_uom: "G",   barcode: "8901234500028", hsn_code: "1006" },
@@ -153,6 +181,18 @@ try {
 
   // Opening balances. Deliberately uneven so the location boundary is
   // obvious the moment you switch persona.
+  // ── prices and pack sizes, so the storefront has something to sell ──
+  for (const [name, [pack, retail, mrp, wholesale]] of Object.entries(PRICE)) {
+    const { rows } = await c.query(
+      "select id from catalog.product where name = $1", [name]);
+    if (!rows[0]) continue;
+
+    await c.query("update catalog.product set pack_size = $2 where id = $1",
+      [rows[0].id, pack]);
+    await c.query("select catalog.set_price($1,$2,$3,$4)",
+      [rows[0].id, retail * 100, mrp * 100, wholesale * 100]);
+  }
+
   const { rows: skus } = await c.query(
     "select sku_code, name from catalog.product order by sku_code");
   const balances = [];
@@ -470,7 +510,7 @@ try {
   await c.query("commit");
 
   console.log(`• 4 locations, 6 users, 6 partners`);
-  console.log(`• ${report.length} products, ${bal.length} opening stock lines`);
+  console.log(`• ${report.length} products (priced), ${bal.length} opening stock lines`);
   console.log(`• 1 purchase with freight, ${sold} sales`);
   console.log(`• 2 API clients, 2 webhook subscriptions, ~1500 logged requests`);
   console.log(`• 2 tickets open: a delivery to receive, a transfer in transit`);

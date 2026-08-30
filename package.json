@@ -23,7 +23,8 @@
     "db:verify": "npx tsx scripts/db-verify.mjs",
     "dev:supabase": "next dev --port 3100",
     "db:jobs": "npx tsx scripts/schedule-jobs.mjs",
-    "user:password": "node scripts/set-password.mjs"
+    "user:password": "node scripts/set-password.mjs",
+    "storefront:smoke": "npx tsx scripts/storefront-smoke.mjs"
   },
   "dependencies": {
     "next": "^16.3.3",
