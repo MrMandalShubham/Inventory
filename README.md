@@ -479,3 +479,33 @@ location. Median, so one supplier disaster does not permanently inflate a three-
 time, but three of them do.
 
 `/planning/<sku>?loc=<code>` shows the whole derivation, step by step.
+
+---
+
+## Testing
+
+```bash
+npm run check          # rebuild the local database and run everything
+npm test               # the suite, against the running container
+```
+
+The container is **Postgres 17 with Supabase's extension layout** — the
+`extensions` schema, pgcrypto and pg_trgm inside it, the same database
+search_path, and the `anon` / `service_role` roles. That is not
+decoration. Migration 0022 passed every local test on the old container
+and failed on deploy with `digest(text, unknown) does not exist`, purely
+because pgcrypto sat in `public` locally and in `extensions` on
+Supabase. `supabase/local/01-supabase-shape.sql` closes that gap.
+
+What a container still cannot prove: Supavisor's transaction pooling,
+Supabase's own `auth.jwt()`, pg_cron. For those:
+
+```bash
+npm run test:supabase -- --target=db.<ref>.supabase.co
+```
+
+It runs the real suite against a real project. It requires
+`TEST_DATABASE_URL` — a **second, disposable** Supabase project — makes
+you type the host, prints the row counts it will destroy, and refuses if
+any schema outside ours holds a foreign key into ours. A bare
+`DATABASE_URL=<remote> npm test` is refused outright.

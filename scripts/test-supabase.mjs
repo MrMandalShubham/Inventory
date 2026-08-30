@@ -39,7 +39,40 @@ import {
   assertTruncateCannotEscape, OUR_SCHEMAS,
 } from "./db-config.mjs";
 
-const connection = process.env.TEST_DATABASE_URL ?? CONNECTION;
+// TEST_DATABASE_URL, not DATABASE_URL. Falling back to DATABASE_URL
+// would mean that forgetting to set anything points the truncating
+// suite at the deployed project — the exact accident every other
+// guard in this file is trying to prevent, arriving through the door
+// marked "default".
+//
+// --use-database-url exists for the case where they really are the
+// same disposable database. It has to be asked for.
+const explicit = process.env.TEST_DATABASE_URL;
+const fallback = process.argv.includes("--use-database-url");
+const connection = explicit ?? (fallback ? CONNECTION : null);
+
+if (!connection) {
+  let live = "?";
+  try { live = new URL(CONNECTION).hostname; } catch { /* unparseable */ }
+
+  console.error(`
+  TEST_DATABASE_URL is not set.
+
+  This runner truncates every inventory table, repeatedly. It will not
+  fall back to DATABASE_URL — which right now points at ${live} — because
+  a default that empties the deployed project is not a default.
+
+  Create a second Supabase project, then put its DIRECT connection
+  string in .env.local:
+
+    TEST_DATABASE_URL=postgresql://postgres:<password>@db.<ref>.supabase.co:5432/postgres
+
+  If DATABASE_URL really is a disposable database, say so:
+
+    npm run test:supabase -- --target=${live} --use-database-url
+`);
+  process.exit(1);
+}
 
 let host = "?";
 try { host = new URL(connection).hostname; } catch { /* unparseable */ }
