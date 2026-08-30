@@ -62,6 +62,27 @@ Sign in to the inventory dashboard → **API keys** → **Mint key**.
 | `pricing:write` | Only if the storefront sets its own prices | `PUT /api/products/:sku` |
 | `cost:read` | **No** | Adds a `cost` field — what you *paid*. A storefront holding this publishes your margin to anyone who opens devtools |
 
+### Or from the command line
+
+The dashboard needs to be reachable and the login to work. The first key is usually the one you want *while* you are still proving the deployment, so there is a script:
+
+```bash
+npm run key:mint -- --name "Storefront"   --scopes catalog:read,stock:read,reservations:write   --locations SH1
+```
+
+```
+  Storefront — LIVE
+
+  ic_live_9f31c0a4e7b2…
+
+  scopes     catalog:read, stock:read, reservations:write
+  locations  SH1
+```
+
+Omit `--locations` and the key may sell from **every** shop. Naming a shop that does not exist prints the ones that do and mints nothing — a key silently bound to fewer shops than you asked for works, and fails later, at a shop somebody assumed it covered.
+
+Add `--env SANDBOX` for a `ic_test_…` key.
+
 The key is shown **once**, at creation. It looks like `ic_live_a1b2c3…`. Copy it then; it is stored hashed and cannot be shown again. Lost key → revoke it and mint another.
 
 > **A key bound to Shop 1 cannot read or hold stock anywhere else.** That is enforced by row-level security in the database, not by the API handlers — so it holds even if a handler has a bug.

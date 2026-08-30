@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Inventory Core \u2014 a system of record for stock.",
+  "description": "Inventory Core — a system of record for stock.",
   "scripts": {
     "db:up": "node scripts/db-up.mjs",
     "db:down": "node scripts/db-down.mjs",
@@ -24,7 +24,8 @@
     "dev:supabase": "next dev --port 3100",
     "db:jobs": "npx tsx scripts/schedule-jobs.mjs",
     "user:password": "node scripts/set-password.mjs",
-    "storefront:smoke": "npx tsx scripts/storefront-smoke.mjs"
+    "storefront:smoke": "npx tsx scripts/storefront-smoke.mjs",
+    "key:mint": "node scripts/mint-key.mjs"
   },
   "dependencies": {
     "next": "^16.3.3",
