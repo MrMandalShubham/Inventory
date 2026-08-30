@@ -399,6 +399,41 @@ npm run storage:gc            # report
 npm run storage:gc -- --delete
 ```
 
+## Deploying
+
+Vercel needs these environment variables. They live only in `.env.local`, which is
+gitignored and never deployed, so nothing arrives by itself:
+
+```
+DATABASE_URL                 the POOLER string — see below
+ADMIN_EMAIL / ADMIN_PASSWORD
+SUPABASE_URL
+SUPABASE_SERVICE_ROLE_KEY
+STORAGE_DRIVER=supabase
+```
+
+**Use the Supavisor pooler, not the direct connection.**
+`db.<ref>.supabase.co` has an AAAA record and no A record — it is IPv6-only. A serverless
+function is IPv4-only, so the hostname does not resolve and every request that touches the
+database fails with `ENOTFOUND`. The symptom is a login that rejects a correct password.
+
+```
+postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres
+```
+
+Transaction-mode pooling is safe: `withSession()` sets its claims with
+`set_config(..., true)` and `SET LOCAL` inside an explicit transaction, so nothing depends
+on session state surviving between statements.
+
+Check a deployment in one request:
+
+```bash
+curl https://<your-app>/api/health
+```
+
+It reports whether each variable is set, which storage driver is active, and whether the
+database actually answers — booleans and error codes only, never hostnames or keys.
+
 ## The webhook worker
 
 Events are queued the instant they happen, by triggers — but nothing leaves the building
