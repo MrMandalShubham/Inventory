@@ -35,7 +35,7 @@ create or replace function platform.emit_stock_changed()
 returns trigger
 language plpgsql
 security definer
-set search_path = platform, stock, catalog, public
+set search_path = platform, stock, catalog, public, extensions
 as $$
 -- @no-scope-check: a trigger on stock.ledger. Everything reaching it
 -- has already passed stock.post_movement(), which checks the
@@ -91,7 +91,7 @@ create or replace function platform.emit_movement_closed()
 returns trigger
 language plpgsql
 security definer
-set search_path = platform, movement, public
+set search_path = platform, movement, public, extensions
 as $$
 -- @no-scope-check: a trigger on movement.movement, reached only
 -- through the lifecycle functions, each of which checks its location.
@@ -125,7 +125,7 @@ create or replace function platform.emit_stock_low()
 returns trigger
 language plpgsql
 security definer
-set search_path = platform, alerting, catalog, public
+set search_path = platform, alerting, catalog, public, extensions
 as $$
 -- @no-scope-check: a trigger on alerting.alert, written only by
 -- alerting.evaluate(), which is a scheduled whole-estate sweep.
@@ -170,7 +170,7 @@ create or replace function platform.emit_reservation_expired()
 returns trigger
 language plpgsql
 security definer
-set search_path = platform, stock, public
+set search_path = platform, stock, public, extensions
 as $$
 -- @no-scope-check: a trigger on stock.reservation. The sweep that
 -- fires it runs over every location by design.

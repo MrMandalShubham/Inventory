@@ -102,7 +102,7 @@ create or replace function catalog.attach_product_image(
 ) returns uuid
 language plpgsql
 security definer
-set search_path = catalog, platform, public
+set search_path = catalog, platform, public, extensions
 as $$
 -- @no-scope-check: the catalogue is global — a product code means the
 -- same thing at every location (docs/09). Role is checked below.
@@ -149,7 +149,7 @@ create or replace function catalog.set_primary_image(p_image uuid)
 returns void
 language plpgsql
 security definer
-set search_path = catalog, platform, public
+set search_path = catalog, platform, public, extensions
 as $$
 -- @no-scope-check: catalogue-wide by design; role checked below.
 declare v_product uuid;
@@ -181,7 +181,7 @@ create or replace function catalog.remove_product_image(p_image uuid)
 returns text
 language plpgsql
 security definer
-set search_path = catalog, platform, public
+set search_path = catalog, platform, public, extensions
 as $$
 -- @no-scope-check: catalogue-wide by design; role checked below.
 declare
@@ -218,7 +218,7 @@ create or replace function catalog.reorder_product_images(
 ) returns integer
 language plpgsql
 security definer
-set search_path = catalog, platform, public
+set search_path = catalog, platform, public, extensions
 as $$
 -- @no-scope-check: catalogue-wide by design; role checked below.
 declare v_n integer := 0;
@@ -256,7 +256,7 @@ returns boolean
 language sql
 stable
 security definer
-set search_path = catalog, public
+set search_path = catalog, public, extensions
 as $$
   -- @no-scope-check: answers one yes/no about an opaque storage key.
   select exists (

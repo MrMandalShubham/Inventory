@@ -55,7 +55,7 @@ create trigger audit_log_no_delete
 
 create or replace function platform.record_audit()
 returns trigger language plpgsql security definer
-set search_path = platform, public
+set search_path = platform, public, extensions
 as $$
 -- @no-scope-check: a trigger has no location argument; it records
 -- whatever change already passed the policies on its own table.

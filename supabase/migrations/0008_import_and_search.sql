@@ -28,7 +28,7 @@ returns table (
 )
 language plpgsql
 security definer
-set search_path = catalog, platform, public
+set search_path = catalog, platform, public, extensions
 as $$
 -- @no-scope-check: the catalogue is global by invariant 3 and has no
 -- location dimension. The role check below is the whole guard.
@@ -133,7 +133,7 @@ returns table (
 )
 language plpgsql
 security definer
-set search_path = stock, catalog, platform, public
+set search_path = stock, catalog, platform, public, extensions
 as $$
 declare
   r          jsonb;

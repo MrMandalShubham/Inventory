@@ -38,7 +38,7 @@ create or replace function ledger.post_for_stock_movement()
 returns trigger
 language plpgsql
 security definer
-set search_path = ledger, stock, movement, platform, public
+set search_path = ledger, stock, movement, platform, public, extensions
 as $$
 -- @no-scope-check: a trigger on stock.ledger. Nothing reaches this
 -- function without having already passed stock.post_movement(), which

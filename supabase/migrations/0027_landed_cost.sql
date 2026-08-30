@@ -63,7 +63,7 @@ create or replace function movement.allocate_landed_cost(p_movement uuid)
 returns integer
 language plpgsql
 security definer
-set search_path = movement, platform, public
+set search_path = movement, platform, public, extensions
 as $$
 -- @no-scope-check: costing a movement the caller already reached
 -- through receive_movement(), which checks the destination.
@@ -124,7 +124,7 @@ create or replace function stock.post_movement(
 ) returns bigint
 language plpgsql
 security definer
-set search_path = stock, catalog, platform, public
+set search_path = stock, catalog, platform, public, extensions
 as $$
 declare
   v_reason   stock.reason%rowtype;
@@ -248,7 +248,7 @@ returns table (
 )
 language sql stable
 security definer
-set search_path = stock, platform, public
+set search_path = stock, platform, public, extensions
 as $$
   -- @no-scope-check: aggregates stock.balance, whose own policy is
   -- location-scoped; the filter below repeats it for the same effect.

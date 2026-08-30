@@ -81,7 +81,7 @@ create or replace function stock.record_wastage(
   p_product uuid, p_location uuid, p_qty integer, p_note text, p_batch uuid default null
 ) returns bigint
 language sql
-set search_path = stock, platform, public
+set search_path = stock, platform, public, extensions
 as $$
   -- Wastage is posted daily, per location, per category — never
   -- discovered as a month-end plug. F&V runs 8–15% against a 12–25%
@@ -94,7 +94,7 @@ create or replace function stock.post_adjustment(
   p_product uuid, p_location uuid, p_delta integer, p_reason text
 ) returns integer
 language plpgsql
-set search_path = stock, platform, public
+set search_path = stock, platform, public, extensions
 as $$
 declare v_after integer;
 begin

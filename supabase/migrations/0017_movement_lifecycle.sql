@@ -61,7 +61,7 @@ create or replace function movement.create_movement(
   p_expected  timestamptz default null
 ) returns uuid
 language plpgsql security definer
-set search_path = movement, stock, catalog, platform, public
+set search_path = movement, stock, catalog, platform, public, extensions
 as $$
 declare
   v_id     uuid;
@@ -121,7 +121,7 @@ end $$;
 create or replace function movement.approve_movement(p_id uuid)
 returns void
 language plpgsql security definer
-set search_path = movement, platform, public
+set search_path = movement, platform, public, extensions
 as $$
 declare m movement.movement%rowtype;
 begin
@@ -158,7 +158,7 @@ create or replace function movement.dispatch_movement(
   p_lines jsonb default null      -- [{line_id, qty}] — defaults to ordered
 ) returns integer
 language plpgsql security definer
-set search_path = movement, stock, catalog, platform, public
+set search_path = movement, stock, catalog, platform, public, extensions
 as $$
 declare
   m       movement.movement%rowtype;
@@ -241,7 +241,7 @@ create or replace function movement.receive_movement(
   p_lines jsonb        -- [{line_id, qty_received, qty_rejected?, reject_reason?}]
 ) returns text
 language plpgsql security definer
-set search_path = movement, stock, catalog, platform, public
+set search_path = movement, stock, catalog, platform, public, extensions
 as $$
 declare
   m           movement.movement%rowtype;
@@ -360,7 +360,7 @@ create or replace function movement.resolve_discrepancy(
   p_reason text
 ) returns integer
 language plpgsql security definer
-set search_path = movement, stock, catalog, platform, public
+set search_path = movement, stock, catalog, platform, public, extensions
 as $$
 declare
   m      movement.movement%rowtype;
@@ -418,7 +418,7 @@ end $$;
 create or replace function movement.cancel_movement(p_id uuid, p_reason text)
 returns void
 language plpgsql security definer
-set search_path = movement, platform, public
+set search_path = movement, platform, public, extensions
 as $$
 declare m movement.movement%rowtype;
 begin
@@ -444,7 +444,7 @@ create or replace function movement.verify_transit()
 returns table (product_id uuid, transit_balance integer, open_tickets integer)
 language sql stable
 security definer
-set search_path = movement, stock, platform, public
+set search_path = movement, stock, platform, public, extensions
 as $$
   -- @no-scope-check: a whole-system integrity check reporting only
   -- discrepancies, like stock.verify_balances().

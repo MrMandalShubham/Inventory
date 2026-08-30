@@ -59,7 +59,7 @@ create or replace function platform.sign_in(
 ) returns table (token text, expires_at timestamptz)
 language plpgsql
 security definer
-set search_path = platform, public
+set search_path = platform, public, extensions
 as $$
 -- @no-scope-check: authentication runs before any scope exists.
 declare
@@ -120,7 +120,7 @@ create or replace function platform.session_claims(p_token text)
 returns jsonb
 language plpgsql
 security definer
-set search_path = platform, public
+set search_path = platform, public, extensions
 as $$
 -- @no-scope-check: resolves a session before any scope exists.
 declare
@@ -158,7 +158,7 @@ end $$;
 
 create or replace function platform.sign_out(p_token text)
 returns void language sql security definer
-set search_path = platform, public
+set search_path = platform, public, extensions
 as $$
   -- @no-scope-check: ends a session and touches no stock.
   delete from platform.session
@@ -169,7 +169,7 @@ $$;
     there is nothing here worth keeping. */
 create or replace function platform.sweep_expired_sessions()
 returns integer language plpgsql security definer
-set search_path = platform, public
+set search_path = platform, public, extensions
 as $$
 -- @no-scope-check: a scheduled cleanup of expired session rows.
 declare n integer;
@@ -183,7 +183,7 @@ end $$;
 create or replace function platform.set_password(p_user uuid, p_password text)
 returns void
 language plpgsql security definer
-set search_path = platform, public
+set search_path = platform, public, extensions
 as $$
 -- @no-scope-check: credentials have no location dimension. The role
 -- and self-service check below is the whole guard.

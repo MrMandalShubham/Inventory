@@ -29,7 +29,7 @@ create or replace function movement.set_charges(
 ) returns void
 language plpgsql
 security definer
-set search_path = movement, platform, public
+set search_path = movement, platform, public, extensions
 as $$
 declare
   m       movement.movement%rowtype;
@@ -85,7 +85,7 @@ create or replace function ledger.post_for_stock_movement()
 returns trigger
 language plpgsql
 security definer
-set search_path = ledger, stock, movement, platform, public
+set search_path = ledger, stock, movement, platform, public, extensions
 as $$
 -- @no-scope-check: a trigger on stock.ledger. Nothing reaches this
 -- function without having already passed stock.post_movement(), which
@@ -192,7 +192,7 @@ create or replace function movement.post_sale_revenue(p_movement uuid)
 returns uuid
 language plpgsql
 security definer
-set search_path = movement, ledger, platform, public
+set search_path = movement, ledger, platform, public, extensions
 as $$
 -- @no-scope-check: reached only from dispatch_movement(), which has
 -- already checked the source location. Called directly it refuses

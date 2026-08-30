@@ -91,7 +91,7 @@ create or replace function stock.reserve(
 ) returns uuid
 language plpgsql
 security definer
-set search_path = stock, catalog, platform, public
+set search_path = stock, catalog, platform, public, extensions
 as $$
 declare
   v_id        uuid;
@@ -158,7 +158,7 @@ create or replace function stock.confirm_reservation(
   p_id uuid, p_order_ref text default null
 ) returns void
 language plpgsql security definer
-set search_path = stock, platform, public
+set search_path = stock, platform, public, extensions
 as $$
 declare r stock.reservation%rowtype;
 begin
@@ -191,7 +191,7 @@ end $$;
 create or replace function stock.consume_reservation(p_id uuid)
 returns bigint
 language plpgsql security definer
-set search_path = stock, platform, public
+set search_path = stock, platform, public, extensions
 as $$
 declare
   r      stock.reservation%rowtype;
@@ -239,7 +239,7 @@ create or replace function stock.release_reservation(
   p_id uuid, p_reason text default 'released'
 ) returns void
 language plpgsql security definer
-set search_path = stock, platform, public
+set search_path = stock, platform, public, extensions
 as $$
 declare r stock.reservation%rowtype;
 begin
@@ -279,7 +279,7 @@ create or replace function stock.sweep_expired_reservations()
 returns integer
 language plpgsql
 security definer
-set search_path = stock, public
+set search_path = stock, public, extensions
 as $$
 -- @no-scope-check: a scheduled sweep over every location. It releases
 -- only holds that have already lapsed and reads no stock out.
@@ -318,7 +318,7 @@ create or replace function stock.verify_reservations()
 returns table (product_id uuid, location_id uuid, counter integer, live_holds integer)
 language sql stable
 security definer
-set search_path = stock, public
+set search_path = stock, public, extensions
 as $$
   -- @no-scope-check: whole-system integrity check reporting only
   -- discrepancies, like stock.verify_balances().

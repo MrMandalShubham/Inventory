@@ -14,6 +14,11 @@
 // not. A guard that depends on remembering is not a guard.
 
 export const CONTAINER = "inventory-core-db";
+
+// Tracks the deployed project's major version. Supabase runs 17.6; a
+// suite green on 16 says nothing about the database the code actually
+// lives on. db-up.mjs recreates the container when this changes.
+export const IMAGE = "postgres:17-alpine";
 export const PORT = process.env.PGPORT ?? "55432";
 export const PASSWORD = "postgres";
 export const DB = "inventory_core";
@@ -62,6 +67,50 @@ export function assertLocal(what, connection = CONNECTION) {
     `  ${where} — not the local container.\n\n` +
     `  If this really is a disposable database, unset DATABASE_URL or point it\n` +
     `  at 127.0.0.1. There is deliberately no flag to override this.\n`);
+}
+
+/**
+ * The test suite's target, which may be remote ONLY when named.
+ *
+ * assertLocal above says there is deliberately no flag to override
+ * it, and there still is not — this is a different question with a
+ * different answer.
+ *
+ * The suite must normally refuse a remote database, because the usual
+ * way it reaches one is a stray DATABASE_URL, and the cost is a wiped
+ * project. But "does this code work on Supabase?" cannot be answered
+ * by a container pretending to be Supabase, and the difference has
+ * already cost a broken deploy once (see supabase/local/01-supabase-
+ * shape.sql). So there is one path to a remote run, and it is narrow:
+ *
+ *   • scripts/test-supabase.mjs is the only caller that sets the
+ *     variable, and it will not set it until the host is typed on the
+ *     command line,
+ *   • the value must MATCH the host actually connected to, so a
+ *     variable left over in a shell cannot authorise a different
+ *     database than the one it was typed for.
+ *
+ * Anything else — CI, a bare `npm test`, an editor task — still gets
+ * the flat refusal.
+ */
+export function assertDisposableTarget(what, connection = CONNECTION) {
+  if (isLocal(connection)) return;
+
+  let host = "?";
+  try { host = new URL(connection).hostname; } catch { /* unparseable */ }
+
+  if (process.env.ALLOW_REMOTE_TEST_TARGET === host) return;
+
+  throw new Error(
+    "REFUSING_TO_RUN_AGAINST_A_REMOTE_DATABASE\n\n" +
+    `  ${what} truncates every table in the system, and DATABASE_URL points at\n` +
+    `  ${host} — not the local container.\n\n` +
+    "  To run the suite against a real Supabase project ON PURPOSE, use the\n" +
+    "  runner, which makes you name the host and shows you what it will\n" +
+    "  destroy first:\n\n" +
+    `    npm run test:supabase -- --target=${host}\n\n` +
+    "  Point it at a project you can afford to empty. It is not a smoke test\n" +
+    "  against production.\n");
 }
 
 /**

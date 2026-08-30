@@ -54,7 +54,7 @@ create or replace function platform.consume_rate_token(
 )
 language plpgsql
 security definer
-set search_path = platform, public
+set search_path = platform, public, extensions
 as $$
 -- @no-scope-check: meters a client that authenticate_api_key() has
 -- already identified. Touches no stock and reads no location data.

@@ -29,7 +29,7 @@ returns table (
 )
 language plpgsql
 security definer
-set search_path = stock, catalog, platform, public
+set search_path = stock, catalog, platform, public, extensions
 as $$
 declare
   r          jsonb;

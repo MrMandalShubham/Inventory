@@ -27,7 +27,7 @@ create or replace function stock.get_balance(
 ) returns integer
 language plpgsql
 security definer
-set search_path = stock, platform, public
+set search_path = stock, platform, public, extensions
 as $$
 declare v_on_hand integer;
 begin
@@ -57,7 +57,7 @@ create or replace function stock.post_adjustment(
 ) returns integer
 language plpgsql
 security definer
-set search_path = stock, platform, public
+set search_path = stock, platform, public, extensions
 as $$
 declare v_after integer;
 begin
@@ -103,7 +103,7 @@ create or replace function stock.ensure_balance(
 ) returns uuid
 language plpgsql
 security definer
-set search_path = stock, platform, public
+set search_path = stock, platform, public, extensions
 as $$
 declare v_id uuid;
 begin

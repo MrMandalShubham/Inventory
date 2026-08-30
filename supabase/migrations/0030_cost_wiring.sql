@@ -35,7 +35,7 @@ create or replace function movement.dispatch_movement(
   p_lines jsonb default null
 ) returns integer
 language plpgsql security definer
-set search_path = movement, stock, catalog, platform, public
+set search_path = movement, stock, catalog, platform, public, extensions
 as $$
 declare
   m       movement.movement%rowtype;
@@ -130,7 +130,7 @@ create or replace function movement.receive_movement(
   p_lines jsonb
 ) returns text
 language plpgsql security definer
-set search_path = movement, stock, catalog, platform, public
+set search_path = movement, stock, catalog, platform, public, extensions
 as $$
 declare
   m           movement.movement%rowtype;

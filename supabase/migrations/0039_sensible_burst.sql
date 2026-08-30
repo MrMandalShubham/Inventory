@@ -58,7 +58,7 @@ create or replace function platform.create_api_client(
   p_per_min      integer default 600
 ) returns table (client_id uuid, api_key text)
 language plpgsql security definer
-set search_path = platform, public
+set search_path = platform, public, extensions
 as $$
 -- @no-scope-check: mints a credential and touches no stock. Admin only,
 -- checked below.

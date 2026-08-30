@@ -76,7 +76,7 @@ create or replace function stock.open_count_sheet(
   p_products uuid[] default null      -- null = every line at that location
 ) returns uuid
 language plpgsql security definer
-set search_path = stock, platform, public
+set search_path = stock, platform, public, extensions
 as $$
 declare v_id uuid; v_code text;
 begin
@@ -112,7 +112,7 @@ end $$;
 create or replace function stock.count_sheet_lines_blind(p_sheet uuid)
 returns table (line_id uuid, sku_code text, product_name text, lot_no text, counted_qty integer)
 language plpgsql stable security definer
-set search_path = stock, catalog, platform, public
+set search_path = stock, catalog, platform, public, extensions
 as $$
 declare v_location uuid;
 begin
@@ -137,7 +137,7 @@ create or replace function stock.record_count(
   p_line uuid, p_counted integer
 ) returns void
 language plpgsql security definer
-set search_path = stock, platform, public
+set search_path = stock, platform, public, extensions
 as $$
 declare v_location uuid; v_status text; v_sheet uuid;
 begin
@@ -173,7 +173,7 @@ end $$;
 create or replace function stock.submit_count_sheet(p_sheet uuid)
 returns integer
 language plpgsql security definer
-set search_path = stock, platform, public
+set search_path = stock, platform, public, extensions
 as $$
 declare v_location uuid; v_uncounted integer;
 begin
@@ -209,7 +209,7 @@ end $$;
 create or replace function stock.approve_count_sheet(p_sheet uuid)
 returns integer
 language plpgsql security definer
-set search_path = stock, platform, public
+set search_path = stock, platform, public, extensions
 as $$
 declare
   v_location uuid; v_status text; v_counted_by uuid;

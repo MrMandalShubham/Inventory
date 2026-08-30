@@ -28,7 +28,7 @@ create or replace function ledger.post_for_stock_movement()
 returns trigger
 language plpgsql
 security definer
-set search_path = ledger, stock, movement, platform, public
+set search_path = ledger, stock, movement, platform, public, extensions
 as $$
 declare
   v_value   bigint;
@@ -150,7 +150,7 @@ create or replace function movement.post_sale_revenue(p_movement uuid)
 returns uuid
 language plpgsql
 security definer
-set search_path = movement, ledger, platform, public
+set search_path = movement, ledger, platform, public, extensions
 as $$
 declare
   m        movement.movement%rowtype;
@@ -196,7 +196,7 @@ create or replace function movement.dispatch_and_invoice(p_movement uuid, p_line
 returns integer
 language plpgsql
 security definer
-set search_path = movement, platform, public
+set search_path = movement, platform, public, extensions
 as $$
 -- @no-scope-check: delegates to dispatch_movement, which checks the
 -- source location before anything moves.
@@ -228,7 +228,7 @@ returns table (
 )
 language sql stable
 security definer
-set search_path = movement, ledger, platform, public
+set search_path = movement, ledger, platform, public, extensions
 as $$
   -- @no-scope-check: restricted to finance and admin below. Money is
   -- role-restricted, not location-restricted — an operator never sees

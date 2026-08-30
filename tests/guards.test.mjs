@@ -248,11 +248,22 @@ describe("Guard: server-only", () => {
       await c.query("grant execute on function platform.skeleton_key(int) to authenticated");
 
       const violations = await runCheck("server-only");
-      const caught = violations.find((v) => v.function_name === "skeleton_key");
+      const caught = violations.filter((v) => v.function_name === "skeleton_key");
 
-      assert.ok(caught, "a server-only function was reachable by authenticated and the guard missed it");
-      assert.equal(caught.violation, "SERVER_ONLY_FUNCTION_IS_EXECUTABLE");
-      assert.equal(caught.reachable_by, "authenticated");
+      assert.ok(caught.length > 0,
+        "a server-only function was reachable by an application role and the guard missed it");
+      assert.ok(caught.every((v) => v.violation === "SERVER_ONLY_FUNCTION_IS_EXECUTABLE"));
+
+      // One row PER ROLE that can reach it, and the assertion is on the
+      // set rather than on the first row. It used to read
+      // `violations.find(...)` and compare `reachable_by` to
+      // 'authenticated' — which passed only because the local container
+      // had no `anon` role, so there was exactly one row to find.
+      // Supabase has anon, and every function is executable by PUBLIC
+      // unless revoked, so the real answer was always at least two rows.
+      const roles = caught.map((v) => v.reachable_by).sort();
+      assert.ok(roles.includes("authenticated"),
+        `expected authenticated among the roles that can reach it, got ${roles.join(", ")}`);
     } finally {
       await c.query("drop function if exists platform.skeleton_key(int)").catch(() => {});
       await c.end();

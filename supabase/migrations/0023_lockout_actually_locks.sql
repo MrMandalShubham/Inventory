@@ -34,7 +34,7 @@ create or replace function platform.sign_in(
 ) returns table (token text, expires_at timestamptz)
 language plpgsql
 security definer
-set search_path = platform, public
+set search_path = platform, public, extensions
 as $$
 -- @no-scope-check: authentication runs before any scope exists.
 declare

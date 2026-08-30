@@ -21,7 +21,7 @@ create or replace function platform.retry_dead_deliveries(
 ) returns integer
 language plpgsql
 security definer
-set search_path = platform, public
+set search_path = platform, public, extensions
 as $$
 -- @no-scope-check: requeues internal queue rows. Admin only, checked
 -- below; touches no stock and no location data.

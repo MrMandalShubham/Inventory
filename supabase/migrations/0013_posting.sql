@@ -29,7 +29,7 @@ create or replace function stock.post_movement(
 ) returns bigint
 language plpgsql
 security definer
-set search_path = stock, catalog, platform, public
+set search_path = stock, catalog, platform, public, extensions
 as $$
 declare
   v_reason   stock.reason%rowtype;
@@ -134,7 +134,7 @@ create or replace function stock.record_wastage(
   p_product uuid, p_location uuid, p_qty integer, p_note text, p_batch uuid default null
 ) returns bigint
 language sql security definer
-set search_path = stock, platform, public
+set search_path = stock, platform, public, extensions
 as $$
   -- Wastage is posted daily, per location, per category — never
   -- discovered as a month-end plug. F&V runs 8–15% against a 12–25%
@@ -147,7 +147,7 @@ create or replace function stock.post_adjustment(
   p_product uuid, p_location uuid, p_delta integer, p_reason text
 ) returns integer
 language plpgsql security definer
-set search_path = stock, platform, public
+set search_path = stock, platform, public, extensions
 as $$
 declare v_after integer;
 begin
@@ -182,7 +182,7 @@ returns table (
 )
 language plpgsql
 security definer
-set search_path = stock, catalog, platform, public
+set search_path = stock, catalog, platform, public, extensions
 as $$
 declare
   r          jsonb;
@@ -259,7 +259,7 @@ returns table (
 )
 language sql stable
 security definer
-set search_path = stock, public
+set search_path = stock, public, extensions
 as $$
   -- @no-scope-check: a whole-system integrity check. It reports
   -- discrepancies, never data — the caller learns THAT a line
@@ -286,7 +286,7 @@ create or replace function stock.rebuild_balances()
 returns integer
 language plpgsql
 security definer
-set search_path = stock, public
+set search_path = stock, public, extensions
 as $$
 -- @no-scope-check: a maintenance operation over the whole projection.
 -- Restricted to admin below; it reads and writes no location data
@@ -321,7 +321,7 @@ create or replace function stock.balance_as_of(p_when timestamptz)
 returns table (product_id uuid, location_id uuid, batch_id uuid, on_hand integer)
 language sql stable
 security definer
-set search_path = stock, platform, public
+set search_path = stock, platform, public, extensions
 as $$
   select l.product_id, l.location_id, l.batch_id, sum(l.qty_delta)::integer
     from stock.ledger l

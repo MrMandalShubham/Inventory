@@ -81,7 +81,7 @@ create or replace function platform.consume_rate_token(
 )
 language plpgsql
 security definer
-set search_path = platform, public
+set search_path = platform, public, extensions
 as $$
 -- @no-scope-check: meters a client that authenticate_api_key() has
 -- already identified. Touches no stock and reads no location data.
@@ -177,7 +177,7 @@ returns table (
 language sql
 stable
 security definer
-set search_path = platform, public
+set search_path = platform, public, extensions
 as $$
   -- @no-scope-check: whole-platform operational data, restricted to
   -- admin by the guard below. Contains no stock and no money.
@@ -218,7 +218,7 @@ returns table (
 language sql
 stable
 security definer
-set search_path = platform, public
+set search_path = platform, public, extensions
 as $$
   -- @no-scope-check: operational counters, admin only per the guard.
   select r.method,
@@ -248,7 +248,7 @@ create or replace function platform.sweep_api_requests(p_keep_days integer defau
 returns integer
 language plpgsql
 security definer
-set search_path = platform, public
+set search_path = platform, public, extensions
 as $$
 -- @no-scope-check: housekeeping on an operational log.
 declare v integer;
@@ -272,7 +272,7 @@ create or replace function platform.set_api_limits(
 ) returns void
 language plpgsql
 security definer
-set search_path = platform, public
+set search_path = platform, public, extensions
 as $$
 -- @no-scope-check: administers a credential, touches no stock.
 begin

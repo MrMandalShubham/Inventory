@@ -106,7 +106,7 @@ create or replace function alerting.evaluate()
 returns table (rule_code text, opened integer, resolved integer)
 language plpgsql
 security definer
-set search_path = alerting, insight, stock, movement, catalog, platform, public
+set search_path = alerting, insight, stock, movement, catalog, platform, public, extensions
 as $$
 -- @no-scope-check: a scheduled sweep across every location. It writes
 -- alert rows; reading them goes through alerting.alert's own policy.
@@ -215,7 +215,7 @@ comment on function alerting.evaluate is
 create or replace function alerting.acknowledge(p_id bigint)
 returns void
 language plpgsql security definer
-set search_path = alerting, platform, public
+set search_path = alerting, platform, public, extensions
 as $$
 declare v_loc uuid;
 begin

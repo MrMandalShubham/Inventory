@@ -55,7 +55,7 @@ create or replace function catalog.attach_product_image(
 ) returns uuid
 language plpgsql
 security definer
-set search_path = catalog, platform, public
+set search_path = catalog, platform, public, extensions
 as $$
 -- @no-scope-check: the catalogue is global — a product code means the
 -- same thing at every location (docs/09). Role is checked below.

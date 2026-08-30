@@ -10,13 +10,16 @@ import pg from "pg";
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { CONNECTION, assertLocal, connectionOptions } from "../scripts/db-config.mjs";
+import { CONNECTION, assertDisposableTarget, connectionOptions } from "../scripts/db-config.mjs";
 
 // The fixtures TRUNCATE every table in the system. Running this
-// suite against anything but a disposable local database empties
-// it — so the suite refuses to start rather than trusting whoever
-// set DATABASE_URL to have meant it.
-assertLocal("the test suite");
+// suite against anything but a disposable database empties it — so
+// the suite refuses to start rather than trusting whoever set
+// DATABASE_URL to have meant it.
+//
+// A remote target is allowed only through scripts/test-supabase.mjs,
+// which makes you name the host first. See assertDisposableTarget.
+assertDisposableTarget("the test suite");
 
 const here = dirname(fileURLToPath(import.meta.url));
 export const root = join(here, "..");

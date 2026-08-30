@@ -52,7 +52,7 @@ create or replace function platform.create_api_client(
   p_environment  text default 'LIVE'
 ) returns table (client_id uuid, api_key text)
 language plpgsql security definer
-set search_path = platform, public
+set search_path = platform, public, extensions
 as $$
 -- @no-scope-check: mints a credential and touches no stock. Admin only,
 -- checked below.
@@ -90,7 +90,7 @@ end $$;
 create or replace function platform.authenticate_api_key(p_key text)
 returns jsonb
 language plpgsql security definer
-set search_path = platform, public
+set search_path = platform, public, extensions
 as $$
 -- @no-scope-check: authentication runs before any scope exists.
 declare c platform.api_client%rowtype;
@@ -214,7 +214,7 @@ create index webhook_delivery_due on platform.webhook_delivery (status, next_att
 create or replace function platform.emit_event(p_event text, p_payload jsonb)
 returns integer
 language plpgsql security definer
-set search_path = platform, public
+set search_path = platform, public, extensions
 as $$
 -- @no-scope-check: fans an already-authorised event out to subscribers
 -- and reads no stock of its own.

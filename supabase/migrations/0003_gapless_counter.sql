@@ -30,7 +30,7 @@ create or replace function platform.next_number(
 ) returns text
 language plpgsql
 security definer
-set search_path = platform, public
+set search_path = platform, public, extensions
 as $$
 -- @no-scope-check: issues a number and touches no location data.
 declare

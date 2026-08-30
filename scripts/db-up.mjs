@@ -1,14 +1,19 @@
 // Start the local Postgres used for development and the confirmation tests.
 //
-// Plain postgres:16 rather than the Supabase CLI: the only Supabase
-// pieces these tests need are auth.jwt() and the `authenticated`
-// role, and supabase/local/00-auth-shim.sql provides both with the
-// same definitions Supabase uses. That keeps the suite fast, and
-// runnable in CI without pulling the whole Supabase stack.
+// Plain postgres rather than the Supabase CLI: the Supabase pieces
+// these tests need are auth.jwt(), the `authenticated` role, and the
+// `extensions` schema layout, and supabase/local/ provides all three
+// with the same definitions Supabase uses. That keeps the suite fast,
+// and runnable in CI without pulling the whole Supabase stack.
+//
+// The IMAGE matters. It tracks the deployed project's major version,
+// because a suite that passes on 16 proves nothing about 17 — and the
+// container is recreated automatically when this changes, since a
+// stale container is a test run against the version we just left.
 
 import { execSync } from "node:child_process";
 import { setTimeout as sleep } from "node:timers/promises";
-import { CONTAINER, PORT, PASSWORD, DB } from "./db-config.mjs";
+import { CONTAINER, PORT, PASSWORD, DB, IMAGE } from "./db-config.mjs";
 
 const run = (cmd, opts = {}) =>
   execSync(cmd, { stdio: "pipe", encoding: "utf8", ...opts }).trim();
@@ -36,18 +41,38 @@ try {
   process.exit(1);
 }
 
-if (running()) {
+/** The image an existing container was built from, or null. */
+function currentImage() {
+  try {
+    return run(`docker inspect -f {{.Config.Image}} ${CONTAINER}`) || null;
+  } catch {
+    return null;
+  }
+}
+
+// A container left over from an earlier IMAGE is not the database the
+// tests are meant to run against. Replace it rather than reusing it:
+// the whole reason the version is pinned is that it must match what is
+// deployed, and silently honouring a stale one defeats the pin.
+const stale = exists() && currentImage() !== IMAGE;
+
+if (stale) {
+  console.log(`• replacing ${CONTAINER} — built from ${currentImage()}, want ${IMAGE}`);
+  try { run(`docker rm -f ${CONTAINER}`); } catch { /* already gone */ }
+}
+
+if (!stale && running()) {
   console.log(`• ${CONTAINER} already running on :${PORT}`);
-} else if (exists()) {
+} else if (!stale && exists()) {
   run(`docker start ${CONTAINER}`);
   console.log(`• started existing ${CONTAINER} on :${PORT}`);
 } else {
   run(
     `docker run -d --name ${CONTAINER} ` +
       `-e POSTGRES_PASSWORD=${PASSWORD} -e POSTGRES_DB=${DB} ` +
-      `-p ${PORT}:5432 postgres:16-alpine`,
+      `-p ${PORT}:5432 ${IMAGE}`,
   );
-  console.log(`• created ${CONTAINER} on :${PORT}`);
+  console.log(`• created ${CONTAINER} on :${PORT} from ${IMAGE}`);
 }
 
 // Readiness. The container reports ready once briefly during init

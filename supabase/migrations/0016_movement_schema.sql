@@ -67,7 +67,7 @@ create or replace function stock.rebuild_balances()
 returns integer
 language plpgsql
 security definer
-set search_path = stock, public
+set search_path = stock, public, extensions
 as $$
 -- @no-scope-check: a maintenance operation over the whole projection,
 -- restricted to admin below.

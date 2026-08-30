@@ -9,7 +9,7 @@
     "db:down": "node scripts/db-down.mjs",
     "db:migrate": "node scripts/migrate.mjs",
     "db:reset": "node scripts/db-reset.mjs",
-    "test": "node --test --test-concurrency=1 \"tests/*.test.mjs\"",
+    "test": "node --import tsx --test --test-concurrency=1 \"tests/*.test.mjs\"",
     "check": "npm run db:reset && npm test",
     "dev": "next dev --port 3100",
     "build": "next build",
@@ -25,7 +25,8 @@
     "db:jobs": "npx tsx scripts/schedule-jobs.mjs",
     "user:password": "node scripts/set-password.mjs",
     "storefront:smoke": "npx tsx scripts/storefront-smoke.mjs",
-    "key:mint": "node scripts/mint-key.mjs"
+    "key:mint": "node scripts/mint-key.mjs",
+    "test:supabase": "node scripts/test-supabase.mjs"
   },
   "dependencies": {
     "next": "^16.3.3",
@@ -40,6 +41,7 @@
     "@types/react": "^19.2.18",
     "postcss": "^8.5.26",
     "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.13",
     "typescript": "^7.0.2"
   }
 }

@@ -104,7 +104,7 @@ create or replace function platform.ensure_admin(
 ) returns uuid
 language plpgsql
 security definer
-set search_path = platform, public
+set search_path = platform, public, extensions
 as $$
 -- @no-scope-check: creates the single administrator identity at
 -- startup. Not reachable by application roles — revoked below.

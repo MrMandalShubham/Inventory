@@ -155,7 +155,7 @@ create or replace function ledger.post(
 ) returns uuid
 language plpgsql
 security definer
-set search_path = ledger, platform, public
+set search_path = ledger, platform, public, extensions
 as $$
 -- @no-scope-check: writes accounting entries for a stock movement that
 -- was already authorised at the point it happened. Reading the result
@@ -199,7 +199,7 @@ returns table (
 )
 language sql stable
 security definer
-set search_path = ledger, public
+set search_path = ledger, public, extensions
 as $$
   -- @no-scope-check: whole-book totals, restricted to finance and
   -- admin by the guard in the WHERE clause below.
@@ -226,7 +226,7 @@ create or replace function ledger.verify_balanced()
 returns table (journal_id uuid, description text, difference_paise bigint)
 language sql stable
 security definer
-set search_path = ledger, public
+set search_path = ledger, public, extensions
 as $$
   -- @no-scope-check: an integrity check reporting only imbalances.
   select j.id, j.description,

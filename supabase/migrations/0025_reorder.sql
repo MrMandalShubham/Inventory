@@ -103,7 +103,7 @@ create or replace function insight.refresh_metrics(p_location uuid default null)
 returns integer
 language plpgsql
 security definer
-set search_path = insight, stock, catalog, movement, platform, public
+set search_path = insight, stock, catalog, movement, platform, public, extensions
 as $$
 -- @no-scope-check: a scheduled recomputation over every location. It
 -- writes only derived numbers, and every read of the result goes
@@ -251,7 +251,7 @@ returns table (
 )
 language sql stable
 security definer
-set search_path = insight, stock, catalog, platform, public
+set search_path = insight, stock, catalog, platform, public, extensions
 as $$
   -- @no-scope-check: reads insight.product_metric, whose own policy is
   -- location-scoped, and platform.location. Returns nothing a caller
@@ -323,7 +323,7 @@ create or replace function insight.explain_reorder(p_product uuid, p_location uu
 returns table (step text, value text, detail text)
 language plpgsql stable
 security definer
-set search_path = insight, stock, catalog, platform, public
+set search_path = insight, stock, catalog, platform, public, extensions
 as $$
 declare m insight.product_metric%rowtype; v_review integer; v_moq integer;
 begin

@@ -87,7 +87,7 @@ create or replace function platform.emit_event(
 ) returns integer
 language plpgsql
 security definer
-set search_path = platform, public
+set search_path = platform, public, extensions
 as $$
 -- @no-scope-check: fans an already-authorised event out to
 -- subscribers and reads no stock of its own.
@@ -132,7 +132,7 @@ create or replace function platform.claim_webhook_batch(
 )
 language plpgsql
 security definer
-set search_path = platform, public
+set search_path = platform, public, extensions
 as $$
 -- @no-scope-check: drains an internal queue. Callable only by admin
 -- and the delivery worker, checked below.
@@ -186,7 +186,7 @@ create or replace function platform.record_webhook_result(
 ) returns text
 language plpgsql
 security definer
-set search_path = platform, public
+set search_path = platform, public, extensions
 as $$
 -- @no-scope-check: writes the outcome of an internal queue item.
 declare
@@ -257,7 +257,7 @@ create or replace function platform.requeue_stuck_deliveries(
 ) returns integer
 language plpgsql
 security definer
-set search_path = platform, public
+set search_path = platform, public, extensions
 as $$
 -- @no-scope-check: internal queue maintenance.
 declare v integer;
@@ -291,7 +291,7 @@ returns table (
 language sql
 stable
 security definer
-set search_path = platform, public
+set search_path = platform, public, extensions
 as $$
   -- @no-scope-check: operational queue state, admin only per the guard.
   select s.id, c.name, s.event, s.url, s.status,
