@@ -1,0 +1,38 @@
+# ── Secrets ──
+#
+# .env.local holds the Supabase service-role key and the database
+# password. That key bypasses row-level security for the entire
+# project, so it must never be committed — not even to a private repo,
+# because repositories change visibility and history is forever.
+#
+# Copy .env.example and fill it in locally.
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# ── Dependencies and build output ──
+node_modules/
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+
+# ── Image bytes ──
+#
+# The local object store. Content-addressed, so it is rebuildable:
+# npm run db:reset. In production the bytes live in Supabase Storage.
+.storage/
+
+# ── Noise ──
+*.log
+npm-debug.log*
+coverage/
+.DS_Store
+Thumbs.db
+
+# Scratch files. Anything named *.tmp.* is a probe, never a deliverable.
+*.tmp.mjs
+*.tmp.js

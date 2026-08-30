@@ -1,0 +1,42 @@
+{
+  "name": "inventory-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Inventory Core \u2014 a system of record for stock.",
+  "scripts": {
+    "db:up": "node scripts/db-up.mjs",
+    "db:down": "node scripts/db-down.mjs",
+    "db:migrate": "node scripts/migrate.mjs",
+    "db:reset": "node scripts/db-reset.mjs",
+    "test": "node --test --test-concurrency=1 \"tests/*.test.mjs\"",
+    "check": "npm run db:reset && npm test",
+    "dev": "next dev --port 3100",
+    "build": "next build",
+    "start": "next start",
+    "db:seed": "node scripts/seed.mjs",
+    "api:smoke": "node scripts/api-smoke.mjs",
+    "storage:gc": "npx tsx scripts/storage-gc.mjs",
+    "webhooks": "npx tsx scripts/webhook-worker.mjs",
+    "storage:setup": "npx tsx scripts/storage-setup.mjs",
+    "storage:check": "npx tsx scripts/storage-check.mjs",
+    "db:verify": "npx tsx scripts/db-verify.mjs",
+    "dev:supabase": "next dev --port 3100",
+    "db:jobs": "npx tsx scripts/schedule-jobs.mjs"
+  },
+  "dependencies": {
+    "next": "^16.3.3",
+    "pg": "^8.13.1",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^26.4.0",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19.2.18",
+    "postcss": "^8.5.26",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2"
+  }
+}

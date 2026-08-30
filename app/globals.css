@@ -1,0 +1,197 @@
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════════════════════════════
+   INVENTORY CORE — design tokens
+
+   The palette is drawn from the subject: deep teal for stock and
+   stability, amber for attention, red only for things that are
+   actually wrong. Semantic colour is kept separate from the accent
+   so "needs attention" never competes with "this is a button".
+
+   Neutrals carry a slight green bias rather than being pure grey —
+   picked to sit under the teal rather than fight it.
+   ═══════════════════════════════════════════════════════════════ */
+
+@theme {
+  --color-ink-950: #0a1413;
+  --color-ink-900: #12211f;
+  --color-ink-700: #2f423e;
+  --color-ink-500: #5b706b;
+  --color-ink-400: #7d918c;
+  --color-ink-200: #cfdad7;
+  --color-ink-100: #e4ebe9;
+  --color-ink-50:  #f2f6f5;
+
+  --color-teal-700: #075549;
+  --color-teal-600: #0b6e5f;
+  --color-teal-500: #109680;
+  --color-teal-100: #d5ece7;
+  --color-teal-50:  #eaf5f2;
+
+  --color-amber-700: #8a4413;
+  --color-amber-600: #b5621d;
+  --color-amber-500: #e08b3c;
+  --color-amber-100: #fbeada;
+  --color-amber-50:  #fdf5ec;
+
+  --color-rose-700: #8f2f22;
+  --color-rose-600: #b8412f;
+  --color-rose-100: #fadfda;
+  --color-rose-50:  #fdf1ee;
+
+  --color-moss-600: #2f7a4f;
+  --color-moss-100: #dcefe2;
+
+  --font-sans: "Inter var", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Consolas, monospace;
+
+  --radius-card: 0.625rem;
+}
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    background: var(--color-ink-50);
+    color: var(--color-ink-900);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Digits that line up in columns, everywhere they appear in one. */
+  .tnum, td.num, th.num { font-variant-numeric: tabular-nums; }
+
+  :focus-visible {
+    outline: 2px solid var(--color-teal-600);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+
+  ::selection { background: var(--color-teal-100); }
+}
+
+@layer components {
+  /* ── surfaces ── */
+  .card {
+    background: #fff;
+    border: 1px solid var(--color-ink-100);
+    border-radius: var(--radius-card);
+  }
+
+  .card-pad { padding: 1.125rem 1.25rem; }
+
+  /* ── type ── */
+  .h-page { font-size: 1.5rem; font-weight: 650; letter-spacing: -0.02em; line-height: 1.15; }
+  .h-sect { font-size: 1rem;   font-weight: 620; letter-spacing: -0.01em; }
+  .lede   { color: var(--color-ink-500); font-size: 0.9375rem; max-width: 68ch; }
+  .meta   { color: var(--color-ink-400); font-size: 0.8125rem; }
+  .mono   { font-family: var(--font-mono); font-size: 0.8125rem; }
+
+  .eyebrow {
+    font-size: 0.6875rem; font-weight: 650; letter-spacing: 0.09em;
+    text-transform: uppercase; color: var(--color-ink-400);
+  }
+
+  /* ── state, encoded in form as well as colour ──
+     A pill reads at a glance; a number alone does not. */
+  .pill {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    font-size: 0.6875rem; font-weight: 650; letter-spacing: 0.02em;
+    padding: 0.15rem 0.5rem; border-radius: 999px;
+    background: var(--color-ink-100); color: var(--color-ink-700);
+    white-space: nowrap;
+  }
+  .pill-good { background: var(--color-moss-100); color: var(--color-moss-600); }
+  .pill-warn { background: var(--color-amber-100); color: var(--color-amber-700); }
+  .pill-bad  { background: var(--color-rose-100);  color: var(--color-rose-700); }
+  .pill-info { background: var(--color-teal-100);  color: var(--color-teal-700); }
+
+  /* ── controls ── */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+    font-size: 0.875rem; font-weight: 620; line-height: 1;
+    padding: 0.6rem 1rem; border-radius: 0.4rem;
+    background: var(--color-teal-600); color: #fff;
+    border: 1px solid transparent; cursor: pointer;
+    transition: background 120ms ease;
+  }
+  .btn:hover { background: var(--color-teal-700); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .btn-ghost {
+    background: #fff; color: var(--color-teal-700);
+    border-color: var(--color-ink-200);
+  }
+  .btn-ghost:hover { background: var(--color-ink-50); }
+
+  .btn-danger { background: var(--color-rose-600); }
+  .btn-danger:hover { background: var(--color-rose-700); }
+
+  .btn-lg { font-size: 1.0625rem; padding: 0.95rem 1.25rem; border-radius: 0.55rem; }
+
+  .field {
+    width: 100%; font-size: 0.9375rem;
+    padding: 0.55rem 0.7rem;
+    border: 1px solid var(--color-ink-200); border-radius: 0.4rem;
+    background: #fff; color: var(--color-ink-900);
+  }
+  .field:focus { border-color: var(--color-teal-600); }
+
+  .label {
+    display: block; font-size: 0.75rem; font-weight: 600;
+    color: var(--color-ink-500); margin-bottom: 0.3rem;
+  }
+
+  /* ── tables ── */
+  .tbl { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  .tbl th {
+    text-align: left; font-size: 0.6875rem; font-weight: 650;
+    letter-spacing: 0.07em; text-transform: uppercase;
+    color: var(--color-ink-400);
+    padding: 0.6rem 0.9rem;
+    border-bottom: 1px solid var(--color-ink-100);
+    white-space: nowrap;
+  }
+  .tbl td {
+    padding: 0.65rem 0.9rem;
+    border-bottom: 1px solid var(--color-ink-100);
+    vertical-align: middle;
+  }
+  .tbl tbody tr:last-child td { border-bottom: 0; }
+  .tbl tbody tr:hover { background: var(--color-ink-50); }
+
+  /* ── messages ── */
+  .notice { border-radius: 0.5rem; padding: 0.75rem 1rem; font-size: 0.875rem; line-height: 1.5; }
+  .notice-info { background: var(--color-teal-50);  border: 1px solid var(--color-teal-100);  color: var(--color-ink-700); }
+  .notice-warn { background: var(--color-amber-50); border: 1px solid var(--color-amber-100); color: var(--color-amber-700); }
+  .notice-bad  { background: var(--color-rose-50);  border: 1px solid var(--color-rose-100);  color: var(--color-rose-700); }
+
+  /* ── the stat tile ──
+     Big number, small label, optional trend. Used on every overview. */
+  .tile { background: #fff; border: 1px solid var(--color-ink-100); border-radius: var(--radius-card); padding: 0.9rem 1.05rem; }
+  .tile-n { font-size: 1.625rem; font-weight: 680; letter-spacing: -0.03em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .tile-l { font-size: 0.75rem; color: var(--color-ink-400); margin-top: 0.15rem; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Print — label sheets only. Everything else is hidden, because a
+   printed dashboard is not a thing anybody wants.
+   ═══════════════════════════════════════════════════════════════ */
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; font-size: 11pt; }
+  .label-sheet { display: grid !important; grid-template-columns: repeat(3, 1fr); gap: 0; }
+  .label {
+    break-inside: avoid;
+    border: 1px dashed #bbb;
+    padding: 6mm 5mm;
+    height: 30mm;
+  }
+  @page { margin: 8mm; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
