@@ -67,7 +67,7 @@ Sign in to the inventory dashboard → **API keys** → **Mint key**.
 The dashboard needs to be reachable and the login to work. The first key is usually the one you want *while* you are still proving the deployment, so there is a script:
 
 ```bash
-npm run key:mint -- --name "Storefront"   --scopes catalog:read,stock:read,reservations:write   --locations SH1
+npm run key:mint -- --name "Storefront" --scopes catalog:read,stock:read,reservations:write --locations SH1
 ```
 
 ```
