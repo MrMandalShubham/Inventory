@@ -68,13 +68,40 @@ function png(size, [r, g, b]) {
   ]);
 }
 
+// One base colour per category — the storefront's ten. These keys are
+// the CATEGORY NAMES, and when they drifted out of date every product
+// fell through to the grey default: 115 products, one identical grey
+// file, and a dedup counter reading 114 that looked like the content
+// addressing working beautifully. It was, on the wrong input.
+//
+// So the miss is now loud rather than grey.
 const PALETTE = {
-  Staples: [214, 178, 108],
-  Dairy: [226, 232, 240],
-  "Fruit & Veg": [134, 179, 106],
-  Beauty: [206, 154, 190],
-  Household: [124, 168, 200],
+  "Fruits & Veggies":     [134, 179, 106],
+  "Dairy, Bread & Eggs":  [226, 232, 240],
+  "Atta, Rice & Dal":     [214, 178, 108],
+  "Oil, Ghee & Masala":   [222, 176,  74],
+  "Snacks & Namkeen":     [232, 150,  92],
+  "Cold Drinks":          [104, 166, 214],
+  "Instant & Noodles":    [212, 132,  96],
+  "Bakery & Biscuits":    [198, 156, 112],
+  "Cleaning & Household": [124, 168, 200],
+  "Personal Care":        [206, 154, 190],
 };
+
+/**
+ * A per-product shift within the category's colour.
+ *
+ * Without it every product in a category renders the same bytes, which
+ * content addressing then stores once — correct, and useless for
+ * seeing whether the right picture reached the right product. The
+ * shift is derived from the name, so it is stable across reseeds.
+ */
+function tint([r, g, b], name) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  const shift = (n, k) => Math.max(24, Math.min(231, n + (((h >>> k) & 31) - 16)));
+  return [shift(r, 0), shift(g, 5), shift(b, 10)];
+}
 
 const c = new pg.Client(connectionOptions());
 await c.connect();
@@ -85,7 +112,14 @@ const { rows: products } = await c.query(
 
 let made = 0, deduped = 0;
 for (const p of products) {
-  const colour = PALETTE[p.category] ?? [180, 180, 180];
+  const base = PALETTE[p.category];
+  if (!base) {
+    // Loud, because the silent version cost 115 identical images.
+    throw new Error(
+      `demo-images: no colour for category "${p.category}" (product "${p.name}"). ` +
+      "PALETTE is keyed by category NAME and has drifted from the catalogue.");
+  }
+  const colour = tint(base, p.name);
 
   // Two renditions, exactly as the browser uploader produces: a
   // display image and a thumbnail.

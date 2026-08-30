@@ -6,6 +6,7 @@
 
 import pg from "pg";
 import "./env.mjs";
+import { CATEGORIES, PRODUCTS, importRows, countByCategory } from "./catalogue.mjs";
 import {
   assertConfirmedTarget, assertTruncateCannotEscape, connectionOptions, CONNECTION,
 } from "./db-config.mjs";
@@ -113,63 +114,28 @@ try {
     select id, crypt('inventory', gen_salt('bf', 10)) from platform.app_user
   `);
 
-  // Landed cost per unit of the base UoM, in paise. Grocery margins
-  // are thin and these are roughly real, so the money screens show
-  // numbers a shopkeeper would recognise rather than round demo
-  // figures that hide arithmetic mistakes.
-  const COST = {
-    "Toor Dal 1kg": 14, "Basmati Rice 5kg": 12, "Atta 10kg": 4,
-    "Refined Sunflower Oil 1L": 13, "Full Cream Milk 500ml": 6, "Curd 400g": 8,
-    "Paneer 200g": 42, "Tomatoes": 3, "Onions": 3, "Bananas": 5,
-    "Face Wash 100ml": 95, "Shampoo 340ml": 62, "Dishwash Bar 200g": 9,
-    "Floor Cleaner 1L": 11, "Steel Water Bottle 1L": 32000,
-  };
-
-  // What the shop CHARGES, per PACK — not per gram. A customer buys a
-  // 1kg bag, not 1000 grams, so the storefront price is the price of
-  // the thing on the shelf and pack_size is what it says on it.
+  // ── the catalogue ──
   //
-  // Written out rather than derived from COST. Cost is a weighted
-  // average that moves with every delivery; a price derived from it
-  // would drift for reasons no customer can see. A price is a
-  // decision somebody holds.
+  // Ten categories and everything in them live in ./catalogue.mjs,
+  // shared with catalogue-load.mjs so a database built from nothing
+  // and a database topped up in place end with the same shelves.
   //
-  //                              pack        retail  mrp   wholesale
-  const PRICE = {
-    "Toor Dal 1kg":              ["1 kg",       165,  180,  148],
-    "Basmati Rice 5kg":          ["5 kg",       640,  699,  575],
-    "Atta 10kg":                 ["10 kg",      445,  480,  399],
-    "Refined Sunflower Oil 1L":  ["1 L",        149,  165,  134],
-    "Full Cream Milk 500ml":     ["500 ml",      34,   35,   31],
-    "Curd 400g":                 ["400 g",       42,   45,   38],
-    "Paneer 200g":               ["200 g",       99,  110,   89],
-    "Tomatoes":                  ["1 kg",        40,   45,   35],
-    "Onions":                    ["1 kg",        38,   42,   33],
-    "Bananas":                   ["6 pcs",       55,   60,   48],
-    "Face Wash 100ml":           ["100 ml",     149,  175,  129],
-    "Shampoo 340ml":             ["340 ml",     299,  340,  259],
-    "Dishwash Bar 200g":         ["200 g",       25,   28,   22],
-    "Floor Cleaner 1L":          ["1 L",        185,  199,  159],
-    "Steel Water Bottle 1L":     ["1 L",        549,  699,  475],
-  };
+  // The categories are inserted BEFORE the products. ensure_category()
+  // would create them anyway, from whichever product happened to name
+  // one first — with no icon and an arbitrary position. The storefront
+  // renders them as ordered tiles, so the order is not incidental.
+  for (const [i, cat] of CATEGORIES.entries()) {
+    await c.query(`
+      insert into catalog.category (id, name, icon, position)
+           values ($1, $2, $3, $4)
+      on conflict (id) do update
+         set name = excluded.name, icon = excluded.icon,
+             position = excluded.position, status = 'ACTIVE'`,
+      [cat.id, cat.name, cat.icon, i + 1]);
+  }
 
-  const products = [
-    { name: "Toor Dal 1kg",           category: "Staples",     base_uom: "G",   barcode: "8901234500011", hsn_code: "0713" },
-    { name: "Basmati Rice 5kg",       category: "Staples",     base_uom: "G",   barcode: "8901234500028", hsn_code: "1006" },
-    { name: "Atta 10kg",              category: "Staples",     base_uom: "G",   barcode: "8901234500035", hsn_code: "1101" },
-    { name: "Refined Sunflower Oil 1L", category: "Staples",   base_uom: "ML",  barcode: "8901234500042", hsn_code: "1512" },
-    { name: "Full Cream Milk 500ml",  category: "Dairy",       base_uom: "ML",  tracking_mode: "BATCH", shelf_life_days: 5,   hsn_code: "0401", barcode: "8901234500059" },
-    { name: "Curd 400g",              category: "Dairy",       base_uom: "G",   tracking_mode: "BATCH", shelf_life_days: 7,   hsn_code: "0403", barcode: "8901234500066" },
-    { name: "Paneer 200g",            category: "Dairy",       base_uom: "G",   tracking_mode: "BATCH", shelf_life_days: 10,  hsn_code: "0406" },
-    { name: "Tomatoes",               category: "Fruit & Veg", base_uom: "G",   tracking_mode: "BATCH", shelf_life_days: 4,   is_weighed: true, hsn_code: "0702" },
-    { name: "Onions",                 category: "Fruit & Veg", base_uom: "G",   tracking_mode: "BATCH", shelf_life_days: 21,  is_weighed: true, hsn_code: "0703" },
-    { name: "Bananas",                category: "Fruit & Veg", base_uom: "G",   tracking_mode: "BATCH", shelf_life_days: 6,   is_weighed: true, hsn_code: "0803" },
-    { name: "Face Wash 100ml",        category: "Beauty",      base_uom: "ML",  tracking_mode: "BATCH", shelf_life_days: 540, hsn_code: "3304", barcode: "8901234500073" },
-    { name: "Shampoo 340ml",          category: "Beauty",      base_uom: "ML",  tracking_mode: "BATCH", shelf_life_days: 730, hsn_code: "3305", barcode: "8901234500080" },
-    { name: "Dishwash Bar 200g",      category: "Household",   base_uom: "G",   barcode: "8901234500097", hsn_code: "3401" },
-    { name: "Floor Cleaner 1L",       category: "Household",   base_uom: "ML",  barcode: "8901234500103", hsn_code: "3402" },
-    { name: "Steel Water Bottle 1L",  category: "Household",   base_uom: "PCS", tracking_mode: "SERIAL", hsn_code: "7323", barcode: "8901234500110" },
-  ];
+  const COST = Object.fromEntries(PRODUCTS.map((p) => [p.name, p.unitCostPaise]));
+  const products = importRows();
 
   const { rows: report } = await c.query(
     "select * from catalog.import_products($1::jsonb)", [JSON.stringify(products)]);
@@ -179,35 +145,59 @@ try {
     throw new Error("seed data is invalid");
   }
 
-  // Opening balances. Deliberately uneven so the location boundary is
-  // obvious the moment you switch persona.
   // ── prices and pack sizes, so the storefront has something to sell ──
-  for (const [name, [pack, retail, mrp, wholesale]] of Object.entries(PRICE)) {
+  //
+  // Stock is counted in grams and millilitres; a customer buys a
+  // bottle. pack_size is what the label says, and the price is the
+  // price of that, not of a gram.
+  for (const p of PRODUCTS) {
     const { rows } = await c.query(
-      "select id from catalog.product where name = $1", [name]);
+      "select id from catalog.product where name = $1", [p.name]);
     if (!rows[0]) continue;
 
     await c.query("update catalog.product set pack_size = $2 where id = $1",
-      [rows[0].id, pack]);
+      [rows[0].id, p.pack]);
     await c.query("select catalog.set_price($1,$2,$3,$4)",
-      [rows[0].id, retail * 100, mrp * 100, wholesale * 100]);
+      [rows[0].id, p.retailPaise, p.mrpPaise, p.wholesalePaise]);
   }
+
+  // ── opening balances ──
+  //
+  // Counted in PACKS and converted, not written in base units.
+  //
+  // Stock is stored in grams and millilitres, so a literal quantity
+  // has to be read as "4,618 grams of dal" — four and a half kilos, in
+  // a warehouse. The old figures were an arithmetic series over the
+  // product index, which was legible with fifteen products and became
+  // nonsense with a hundred and fifteen.
+  //
+  // Packs are the unit a shopkeeper counts in, and multiplying by
+  // packBase at the last moment keeps the ledger in base units where
+  // it belongs.
+  //
+  // Deliberately uneven, so the location boundary is obvious the
+  // moment you switch persona.
+  const packBase = Object.fromEntries(PRODUCTS.map((p) => [p.name, p.packBase]));
 
   const { rows: skus } = await c.query(
     "select sku_code, name from catalog.product order by sku_code");
+
   const balances = [];
   skus.forEach((s, i) => {
     // Opening stock states what it cost, so the valuation and the
     // trial balance have something true to show. A line with no cost
     // would enter at no value — see migration 0032.
     const cost = COST[s.name];
-    const at = (location_code, on_hand) =>
-      balances.push({ sku_code: s.sku_code, location_code, on_hand, unit_cost_paise: cost });
+    const per = packBase[s.name] ?? 1;
 
-    at("HUB", 400 + i * 37);
-    if (i % 3 !== 2) at("SH1", 20 + i * 11);
-    if (i % 2 === 0) at("SH2", 45 + i * 7);
-    if (i % 4 === 0) at("SH3", 12 + i * 5);
+    const at = (location_code, packs) =>
+      balances.push({ sku_code: s.sku_code, location_code,
+                      on_hand: packs * per, unit_cost_paise: cost });
+
+    at("HUB", 60 + (i % 11) * 9);
+    if (i % 3 !== 2) at("SH1", 14 + (i % 7) * 5);
+    if (i % 2 === 0) at("SH2", 18 + (i % 5) * 6);
+    if (i % 4 === 0) at("SH3", 9 + (i % 4) * 4);
   });
 
   const { rows: bal } = await c.query(
@@ -510,7 +500,10 @@ try {
   await c.query("commit");
 
   console.log(`• 4 locations, 6 users, 6 partners`);
-  console.log(`• ${report.length} products (priced), ${bal.length} opening stock lines`);
+  console.log(`• ${report.length} products (priced) in ${CATEGORIES.length} categories, ${bal.length} opening stock lines`);
+  for (const [cat, n] of countByCategory()) {
+    console.log(`    ${cat.padEnd(22)} ${String(n).padStart(3)}`);
+  }
   console.log(`• 1 purchase with freight, ${sold} sales`);
   console.log(`• 2 API clients, 2 webhook subscriptions, ~1500 logged requests`);
   console.log(`• 2 tickets open: a delivery to receive, a transfer in transit`);
