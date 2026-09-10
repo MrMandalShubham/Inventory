@@ -1,119 +1,109 @@
 import { withSession } from "@/lib/db";
 import { currentClaims, CAN_PLAN } from "@/lib/session";
-import { parseCsv } from "@/lib/csv";
-import { PageHeader, Pill, Card, Notice, TableWrap, Section } from "../ui";
+import { PageHeader, Notice } from "../ui";
+import { ImportForm } from "./import-form";
 
 export const dynamic = "force-dynamic";
 
-const SAMPLE = `name,category,base_uom,tracking_mode,shelf_life_days,hsn_code,barcode
-Toor Dal 1kg,Staples,G,NONE,,0713,8901234500011
-Basmati Rice 5kg,Staples,G,NONE,,1006,8901234500028
-Full Cream Milk 500ml,Dairy,ML,BATCH,5,0401,8901234500035
-Face Wash 100ml,Beauty,ML,BATCH,540,3304,8901234500042
-Tomatoes,Fruit & Veg,G,BATCH,4,0702,
-,Staples,G,NONE,,,
-Mystery Item,Other,WIDGETS,NONE,,,
-Curd 400g,Dairy,G,NONE,7,0403,`;
-
-export default async function ImportPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ csv?: string }>;
-}) {
-  const { csv } = await searchParams;
+/**
+ * Import products, or opening stock.
+ *
+ * ── What changed, and why ──
+ *
+ * The old screen posted the CSV as a QUERY STRING. That works for the
+ * eight-row sample it shipped with and fails for the only file anyone
+ * really has: past a few thousand characters the URL is truncated or
+ * refused before any code runs. The screen could not import a price
+ * list.
+ *
+ * It also had no preview, so the first time you learned a file was
+ * wrong was after it had landed; no file picker, so a .csv had to be
+ * opened in an editor and pasted; no price columns, so an imported
+ * product could not be sold until somebody priced it by hand; and a
+ * sample using category names that no longer exist, which quietly
+ * created new categories outside the storefront's ten.
+ *
+ * The templates below are generated from the live catalogue rather
+ * than hardcoded — a sample that goes stale teaches the wrong thing
+ * with full confidence.
+ */
+export default async function ImportPage() {
   const me = await currentClaims();
   const canImport = CAN_PLAN.includes(me.role);
 
-  let report: any[] | null = null;
-  let fatal: string | null = null;
+  const data = await withSession(me, async (c) => ({
+    categories: (await c.query(
+      `select id, name from catalog.category
+        where status = 'ACTIVE' order by position, name`)).rows,
+    uoms: (await c.query("select code from catalog.uom order by code")).rows.map((r) => r.code),
+    locations: (await c.query(
+      `select code from platform.location
+        where status = 'ACTIVE' and type <> 'VIRTUAL' order by code`)).rows.map((r) => r.code),
+    sample: (await c.query(
+      `select p.sku_code, p.name, l.code as location
+         from catalog.product p
+         cross join lateral (
+           select code from platform.location
+            where status='ACTIVE' and type <> 'VIRTUAL' order by code limit 1) l
+        where p.status = 'ACTIVE' order by p.sku_code limit 2`)).rows,
+  }));
 
-  if (csv && csv.trim()) {
-    const rows = parseCsv(csv);
-    if (rows.length === 0) {
-      fatal = "No data rows found. The first line must be a header.";
-    } else {
-      try {
-        report = await withSession(me, async (c) =>
-          (await c.query("select * from catalog.import_products($1::jsonb)",
-            [JSON.stringify(rows)])).rows);
-      } catch (e) {
-        fatal = e instanceof Error ? e.message : String(e);
-      }
-    }
-  }
+  const cat = data.categories[0]?.name ?? "Atta, Rice & Dal";
+  const loc = data.locations[0] ?? "HUB";
 
-  const ok = report?.filter((r) => r.status !== "FAILED").length ?? 0;
-  const bad = report?.filter((r) => r.status === "FAILED").length ?? 0;
+  const templates = {
+    products: [
+      "name,category,base_uom,pack_size,tracking_mode,shelf_life_days,hsn_code,tax_rate,retail,mrp,wholesale,barcode",
+      `Haldi Powder 200g,${cat},G,200 g,BATCH,540,0910,5,58,64,52,`,
+      `Jeera Whole 100g,${cat},G,100 g,BATCH,540,0909,5,68,75,61,`,
+      `Ajwain 100g,${cat},G,100 g,BATCH,540,0910,5,45,50,40,`,
+    ].join("\n"),
+
+    stock: [
+      "sku,location,quantity,cost",
+      ...(data.sample.length > 0
+        ? data.sample.map((s: any) => `${s.sku_code},${s.location},2000,14`)
+        : [`PRD-2026-000001,${loc},2000,14`]),
+    ].join("\n"),
+  };
 
   return (
     <>
       <PageHeader
-        title="Import products"
+        title="Import"
         lede={
           <>
-            Paste a CSV. The first row is the header, and the columns match the product
-            fields: <span className="mono">name, category, base_uom, tracking_mode,
-            shelf_life_days, hsn_code, tax_rate, barcode, sku_code</span>. Include{" "}
-            <span className="mono">sku_code</span> to update rather than create.
+            Bring in a spreadsheet — products, or the stock already sitting on a shelf.
+            Every file is checked and shown to you before anything is written.
           </>
         }
       />
 
-      <Notice tone="info" title="One bad row never aborts the import.">
-        Each row runs in its own sub-block, so the good rows land and the bad ones come back
-        with a line number and a reason. A 5,000-row file always has bad rows — all-or-nothing
-        would mean fixing one, re-running, and finding the next, five thousand times.
-      </Notice>
-
       {!canImport && (
-        <div className="mt-4">
+        <div className="mb-4">
           <Notice tone="bad" title={`${me.full_name} cannot import.`}>
-            Only a planner or admin may. Try it anyway — the refusal comes from the database,
-            not from this page.
+            Only a planner or admin may. The preview still works — the refusal comes from
+            the database when you try to commit, not from this page.
           </Notice>
         </div>
       )}
 
-      <Card className="mt-4">
-        <form action="/import" method="get">
-          <label className="label" htmlFor="csv">CSV</label>
-          <textarea id="csv" name="csv" defaultValue={csv ?? SAMPLE} spellCheck={false}
-                    rows={12}
-                    className="field mono w-full resize-y" />
-          <div className="mt-3 flex items-center gap-3">
-            <button type="submit" className="btn">Import</button>
-            <span className="meta">The sample above contains three deliberately broken rows.</span>
-          </div>
-        </form>
-      </Card>
+      <div className="mb-4">
+        <Notice tone="info" title="One bad row never stops the rest.">
+          Each row is applied in its own sub-block, so the good ones land and the bad ones
+          come back with a line number and a reason. A five-thousand-row file always has bad
+          rows, and all-or-nothing would mean fixing one, re-running, and finding the next —
+          five thousand times.
+        </Notice>
+      </div>
 
-      {fatal && <div className="mt-4"><Notice tone="bad" title="Import refused:">{fatal}</Notice></div>}
-
-      {report && (
-        <Section title={`Result — ${ok} landed, ${bad} failed`}>
-          <TableWrap>
-            <thead>
-              <tr><th className="num w-16">Row</th><th>Status</th><th>Code</th><th>Message</th></tr>
-            </thead>
-            <tbody>
-              {report.map((r) => (
-                <tr key={r.row_number}>
-                  <td className="num tnum">{r.row_number}</td>
-                  <td>
-                    <Pill tone={r.status === "CREATED" ? "good" : r.status === "UPDATED" ? "info" : "bad"}>
-                      {r.status.toLowerCase()}
-                    </Pill>
-                  </td>
-                  <td className="mono">{r.sku_code ?? "—"}</td>
-                  <td className={r.status === "FAILED" ? "text-rose-700" : "text-ink-500"}>
-                    {r.message ?? "—"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </TableWrap>
-        </Section>
-      )}
+      <ImportForm
+        templates={templates}
+        categories={data.categories}
+        uoms={data.uoms}
+        locations={data.locations}
+        canImport={canImport}
+      />
     </>
   );
 }

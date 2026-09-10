@@ -102,6 +102,43 @@ export async function withSession<T>(
 }
 
 /**
+ * Run as the signed-in user, then throw the work away.
+ *
+ * The import screen offers a preview, and a preview that guesses is
+ * worse than none: it would pass rows the real import rejects, because
+ * the rules live in constraints, triggers and CHECK clauses rather
+ * than in anything a page could reimplement.
+ *
+ * So the preview IS the import. It runs every row through the same
+ * function, collects exactly what happened, and rolls back. What you
+ * see is what you will get, because it already got it.
+ *
+ * The rollback is unconditional — no early return, no branch that
+ * could commit. Anything read out of here must be plain data, since
+ * the rows it describes no longer exist by the time it is returned.
+ */
+export async function withRollback<T>(
+  claims: Record<string, unknown>,
+  fn: (c: pg.PoolClient) => Promise<T>,
+): Promise<T> {
+  const client = await pool.connect();
+  try {
+    await client.query("begin");
+    await client.query("select set_config('request.jwt.claims', $1, true)", [
+      JSON.stringify(claims),
+    ]);
+    await client.query("set local role authenticated");
+    return await fn(client);
+  } finally {
+    // In the finally, so a thrown error and a clean return leave by
+    // the same door. A commit path that exists at all is a commit path
+    // that runs one day.
+    await client.query("rollback").catch(() => {});
+    client.release();
+  }
+}
+
+/**
  * Queries that run BEFORE a session exists — listing the personas the
  * switcher offers. This is the one place the app legitimately reads
  * without claims, standing in for what an auth server would do.
