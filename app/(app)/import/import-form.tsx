@@ -20,8 +20,10 @@ const INITIAL: ImportResult = {
 export type Templates = { products: string; stock: string };
 
 export function ImportForm({
-  templates, categories, uoms, locations, canImport,
+  kind, templates, categories, uoms, locations, canImport,
 }: {
+  /** Fixed by the tab that renders this, rather than a tab of its own. */
+  kind: "products" | "stock";
   templates: Templates;
   categories: { id: string; name: string }[];
   uoms: string[];
@@ -29,7 +31,6 @@ export function ImportForm({
   canImport: boolean;
 }) {
   const [state, formAction, pending] = useActionState(runImport, INITIAL);
-  const [kind, setKind] = useState<"products" | "stock">("products");
   const [csv, setCsv] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -40,27 +41,8 @@ export function ImportForm({
   const canCommit =
     state.mode === "preview" && !state.fatal && landed > 0 && state.kind === kind;
 
-  const pick = (k: "products" | "stock") => {
-    setKind(k);
-    setCsv("");
-    setFileName(null);
-    if (fileRef.current) fileRef.current.value = "";
-  };
-
   return (
     <>
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        {([["products", "Products"], ["stock", "Opening stock"]] as const).map(([k, label]) => (
-          <button key={k} type="button" onClick={() => pick(k)} style={{
-            padding: "7px 15px", borderRadius: 4, fontSize: 14, fontWeight: 600,
-            cursor: "pointer",
-            border: `1px solid ${kind === k ? "var(--accent)" : "var(--line)"}`,
-            background: kind === k ? "var(--accent)" : "transparent",
-            color: kind === k ? "#fff" : "inherit",
-          }}>{label}</button>
-        ))}
-      </div>
-
       <div className="card">
         <div className="card-pad">
           <p className="meta" style={{ marginTop: 0 }}>

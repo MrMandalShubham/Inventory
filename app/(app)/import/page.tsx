@@ -1,55 +1,48 @@
 import { withSession } from "@/lib/db";
 import { currentClaims, CAN_PLAN } from "@/lib/session";
 import { PageHeader, Notice } from "../ui";
+import { ImportTabs } from "./tabs";
+import { ReceiveForm } from "./receive-form";
 import { ImportForm } from "./import-form";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Import products, or opening stock.
+ * Import — a delivery, or a catalogue.
  *
- * ── What changed, and why ──
+ * ── Why these are two tabs and not one screen ──
  *
- * The old screen posted the CSV as a QUERY STRING. That works for the
- * eight-row sample it shipped with and fails for the only file anyone
- * really has: past a few thousand characters the URL is truncated or
- * refused before any code runs. The screen could not import a price
- * list.
+ * They were one screen, and it asked for twelve columns. But a
+ * product's category, unit, HSN code, shelf life and tax rate are
+ * decided ONCE, when the product is created. A delivery does not
+ * restate them; it says how much of something already known turned up
+ * and where it came from.
  *
- * It also had no preview, so the first time you learned a file was
- * wrong was after it had landed; no file picker, so a .csv had to be
- * opened in an editor and pasted; no price columns, so an imported
- * product could not be sold until somebody priced it by hand; and a
- * sample using category names that no longer exist, which quietly
- * created new categories outside the storefront's ten.
- *
- * The templates below are generated from the live catalogue rather
- * than hardcoded — a sample that goes stale teaches the wrong thing
- * with full confidence.
+ * Conflating the two made the weekly job carry the cost of the rare
+ * one. Receiving is now three questions — where it arrived, where it
+ * came from, and what was in it — and the spreadsheet lives on the
+ * other tab, where it is the right tool for the rarer job of creating
+ * a hundred products at once.
  */
 export default async function ImportPage() {
   const me = await currentClaims();
   const canImport = CAN_PLAN.includes(me.role);
 
   const data = await withSession(me, async (c) => ({
+    // Only locations this user may post to. The database would refuse
+    // anything else, but offering a shop somebody cannot receive into
+    // teaches them the wrong thing about their own permissions.
+    locations: (await c.query(
+      `select id, code, name from platform.location
+        where status = 'ACTIVE' and type <> 'VIRTUAL' order by code`)).rows,
     categories: (await c.query(
       `select id, name from catalog.category
         where status = 'ACTIVE' order by position, name`)).rows,
     uoms: (await c.query("select code from catalog.uom order by code")).rows.map((r) => r.code),
-    locations: (await c.query(
-      `select code from platform.location
-        where status = 'ACTIVE' and type <> 'VIRTUAL' order by code`)).rows.map((r) => r.code),
-    sample: (await c.query(
-      `select p.sku_code, p.name, l.code as location
-         from catalog.product p
-         cross join lateral (
-           select code from platform.location
-            where status='ACTIVE' and type <> 'VIRTUAL' order by code limit 1) l
-        where p.status = 'ACTIVE' order by p.sku_code limit 2`)).rows,
   }));
 
   const cat = data.categories[0]?.name ?? "Atta, Rice & Dal";
-  const loc = data.locations[0] ?? "HUB";
+  const locationCodes = data.locations.map((l: any) => l.code);
 
   const templates = {
     products: [
@@ -61,9 +54,7 @@ export default async function ImportPage() {
 
     stock: [
       "sku,location,quantity,cost",
-      ...(data.sample.length > 0
-        ? data.sample.map((s: any) => `${s.sku_code},${s.location},2000,14`)
-        : [`PRD-2026-000001,${loc},2000,14`]),
+      `PRD-2026-000001,${locationCodes[0] ?? "HUB"},2000,14`,
     ].join("\n"),
   };
 
@@ -71,38 +62,68 @@ export default async function ImportPage() {
     <>
       <PageHeader
         title="Import"
-        lede={
-          <>
-            Bring in a spreadsheet — products, or the stock already sitting on a shelf.
-            Every file is checked and shown to you before anything is written.
-          </>
-        }
+        lede="Receive a delivery, or load a spreadsheet of new products."
       />
 
       {!canImport && (
         <div className="mb-4">
-          <Notice tone="bad" title={`${me.full_name} cannot import.`}>
-            Only a planner or admin may. The preview still works — the refusal comes from
-            the database when you try to commit, not from this page.
+          <Notice tone="warn" title={`${me.full_name} may receive stock, but not add products.`}>
+            Receiving a delivery is an everyday job and your role can do it. Creating products
+            in bulk is a planner or admin job — the refusal comes from the database, not from
+            this page.
           </Notice>
         </div>
       )}
 
-      <div className="mb-4">
-        <Notice tone="info" title="One bad row never stops the rest.">
-          Each row is applied in its own sub-block, so the good ones land and the bad ones
-          come back with a line number and a reason. A five-thousand-row file always has bad
-          rows, and all-or-nothing would mean fixing one, re-running, and finding the next —
-          five thousand times.
-        </Notice>
-      </div>
-
-      <ImportForm
-        templates={templates}
-        categories={data.categories}
-        uoms={data.uoms}
-        locations={data.locations}
-        canImport={canImport}
+      <ImportTabs
+        receive={
+          data.locations.length === 0 ? (
+            <Notice tone="bad" title="You have no location to receive into.">
+              Stock belongs to a place. Ask an admin to give you access to a shop or a
+              warehouse.
+            </Notice>
+          ) : (
+            <ReceiveForm locations={data.locations} canReceive />
+          )
+        }
+        catalogue={
+          <>
+            <div className="mb-4">
+              <Notice tone="info" title="This creates PRODUCTS, not stock.">
+                A row here is a thing the shop sells — its name, unit, category and price. To
+                say how many arrived, use “Receive stock”.
+              </Notice>
+            </div>
+            <ImportForm
+              kind="products"
+              templates={templates}
+              categories={data.categories}
+              uoms={data.uoms}
+              locations={locationCodes}
+              canImport={canImport}
+            />
+          </>
+        }
+        opening={
+          <>
+            <div className="mb-4">
+              <Notice tone="warn" title="For go-live, not for deliveries.">
+                An opening balance says what was already on the shelf on the day this system
+                started. Use it once. A delivery that arrives afterwards is a receipt — it
+                carries a supplier, a cost and, for perishables, a lot number, and “Receive
+                stock” records all three.
+              </Notice>
+            </div>
+            <ImportForm
+              kind="stock"
+              templates={templates}
+              categories={data.categories}
+              uoms={data.uoms}
+              locations={locationCodes}
+              canImport={canImport}
+            />
+          </>
+        }
       />
     </>
   );
