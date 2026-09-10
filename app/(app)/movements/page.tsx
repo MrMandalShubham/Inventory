@@ -2,6 +2,7 @@ import Link from "next/link";
 import { withSession } from "@/lib/db";
 import { currentClaims, CAN_APPROVE } from "@/lib/session";
 import { PageHeader, Tile, Pill, Dot, Card, Empty, Notice, TableWrap, Section, When } from "../ui";
+import { param } from "@/lib/params";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,7 @@ export default async function Movements({
               or ($1 = 'open'  and m.status not in ('CLOSED','CANCELLED'))
               or ($1 = 'stuck' and m.status = 'DISCREPANCY')
               or ($1 = 'road'  and m.status = 'IN_TRANSIT'))
-       order by m.raised_at desc limit 80`, [show ?? null])).rows;
+       order by m.raised_at desc limit 80`, [param(show)])).rows;
 
     const transit = (await c.query(`
       select coalesce(sum(b.on_hand),0)::int as units,

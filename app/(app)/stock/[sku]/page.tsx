@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { withSession } from "@/lib/db";
 import { currentClaims } from "@/lib/session";
 import { PageHeader, Tile, Pill, Dot, Card, Empty, Notice, TableWrap, Section, When } from "../../ui";
+import { param } from "@/lib/params";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +55,7 @@ export default async function ProductLedger({
          join stock.reason r on r.code = l.reason_code
          join platform.location loc on loc.id = l.location_id
         where l.product_id = $1 and ($2::text is null or loc.code = $2)`,
-      [product.id, loc ?? null])).rows[0];
+      [product.id, param(loc)])).rows[0];
 
     const entries = (await c.query(
       `select l.id, l.qty_delta, l.balance_after, l.reason_code, l.note,
@@ -71,7 +72,7 @@ export default async function ProductLedger({
          left join movement.movement m on m.id = l.movement_id
         where l.product_id = $1 and ($2::text is null or loc.code = $2)
         order by l.occurred_at desc, l.id desc
-        limit 100`, [product.id, loc ?? null])).rows;
+        limit 100`, [product.id, param(loc)])).rows;
 
     return { product, positions, summary, entries };
   });

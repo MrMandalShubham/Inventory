@@ -2,6 +2,7 @@ import Link from "next/link";
 import { withSession } from "@/lib/db";
 import { currentClaims } from "@/lib/session";
 import { PageHeader, Card, Empty, Notice } from "../../ui";
+import { param } from "@/lib/params";
 
 export const dynamic = "force-dynamic";
 
@@ -77,7 +78,7 @@ export default async function Labels({
          join catalog.uom u on u.id = p.base_uom_id
         where p.status = 'ACTIVE'
           and ($1::text is null or p.name ilike '%'||$1||'%' or p.sku_code ilike '%'||$1||'%')
-        order by p.sku_code limit 60`, [q ?? null])).rows);
+        order by p.sku_code limit 60`, [param(q)])).rows);
 
   return (
     <>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { withSession } from "@/lib/db";
 import { currentClaims, CAN_SEE_MONEY } from "@/lib/session";
 import { PageHeader, Tile, Pill, Dot, Card, Empty, Notice, TableWrap, Section } from "../ui";
+import { param } from "@/lib/params";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,9 @@ export default async function Reports({
     const locations = (await c.query(
       `select id, code, name from platform.location
         where status='ACTIVE' and type <> 'VIRTUAL' order by code`)).rows;
-    const locId = loc ? (locations.find((l: any) => l.code === loc)?.id ?? null) : null;
+    const locId = param(loc)
+      ? (locations.find((l: any) => l.code === param(loc))?.id ?? null)
+      : null;
 
     const dead = (await c.query(
       `select p.sku_code, p.name, l.code as location_code,

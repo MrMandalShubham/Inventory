@@ -5,6 +5,7 @@ import {
   PageHeader, Tile, Pill, Dot, Card, Empty, Notice, TableWrap, Section, When,
 } from "../ui";
 import { refreshMetrics, raiseFromSuggestion } from "./actions";
+import { param } from "@/lib/params";
 
 export const dynamic = "force-dynamic";
 
@@ -32,8 +33,8 @@ export default async function Planning({
       `select id, code, name from platform.location
         where status='ACTIVE' and type <> 'VIRTUAL' order by code`)).rows;
 
-    const locId = loc
-      ? (locations.find((l: any) => l.code === loc)?.id ?? null)
+    const locId = param(loc)
+      ? (locations.find((l: any) => l.code === param(loc))?.id ?? null)
       : null;
 
     const suggestions = (await c.query(

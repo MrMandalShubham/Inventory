@@ -5,6 +5,7 @@ import {
   PageHeader, Tile, Pill, Dot, Card, Empty, Notice, TableWrap, Section,
 } from "../ui";
 import { postAdjustment, recordWastage } from "./actions";
+import { param } from "@/lib/params";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,7 @@ export default async function Stock({
                                    and bt.expiry_date <= current_date + 7))
         order by l.code, p.sku_code
         limit 400`,
-      [loc ?? null, q ?? null, only ?? null])).rows;
+      [param(loc), param(q), param(only)])).rows;
 
     const totals = (await c.query(
       `select coalesce(sum(b.on_hand),0)::int  as units,
@@ -52,7 +53,7 @@ export default async function Stock({
          from stock.balance b
          join platform.location l on l.id = b.location_id
         where l.type <> 'VIRTUAL' and ($1::text is null or l.code = $1)`,
-      [loc ?? null])).rows[0];
+      [param(loc)])).rows[0];
 
     const drift = (await c.query(
       "select count(*)::int as n from stock.verify_balances()")).rows[0].n;
