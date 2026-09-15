@@ -24,15 +24,29 @@ export const GET = storefrontRoute("catalog:read", async (ctx, req, params) => {
            p.category_id, p.pack_size, p.hsn_code, p.tax_rate,
            p.is_weighed, p.shelf_life_days, u.code as uom, u.name as uom_name,
            pr.retail_paise, pr.mrp_paise, pr.wholesale_paise,
-           coalesce(b.on_hand - b.reserved - b.allocated - b.damaged, 0) as available,
+           b.free as available,
            b.weighted_avg_cost as cost_paise,
            c.name as category_name
       from catalog.product p
       join catalog.uom u on u.id = p.base_uom_id
       left join catalog.category c on c.id = p.category_id
       left join lateral catalog.price_for(p.id, $2::uuid) pr on true
-      left join stock.balance b
-             on b.product_id = p.id and b.location_id = $2::uuid and b.batch_id is null
+      -- Availability is the sum across EVERY balance row for this
+      -- product here: the batch-less row and every lot. Migration 0054
+      -- moved lot-tracked stock into lots, and a join pinned to
+      -- `batch_id is null` then matched nothing and reported zero —
+      -- which showed 84 of 118 products as out of stock on a live
+      -- storefront. Cost is quantity-weighted across the lots, because
+      -- averaging the averages would weight a lot of 2 like a lot of 900.
+      left join lateral (
+        select coalesce(sum(x.on_hand - x.reserved - x.allocated - x.damaged), 0)::int
+                 as free,
+               case when coalesce(sum(x.on_hand), 0) > 0
+                    then sum(x.on_hand * x.weighted_avg_cost) / sum(x.on_hand)
+                    else max(x.weighted_avg_cost) end as weighted_avg_cost
+          from stock.balance x
+         where x.product_id = p.id and x.location_id = $2::uuid
+      ) b on true
      where p.status = 'ACTIVE'
        and (p.slug = lower($1) or p.sku_code = upper($1)
             or ($1 ~ '^[0-9a-f-]{36}$' and p.id = $1::uuid))`,
@@ -54,11 +68,12 @@ export const GET = storefrontRoute("catalog:read", async (ctx, req, params) => {
   // shop rather than showing "out of stock" and losing the sale.
   const elsewhere = loc ? (await ctx.db.query(`
     select l.code, l.name,
-           (b.on_hand - b.reserved - b.allocated - b.damaged) as available
+           sum(b.on_hand - b.reserved - b.allocated - b.damaged)::int as available
       from stock.balance b
       join platform.location l on l.id = b.location_id
      where b.product_id = $1 and l.type <> 'VIRTUAL' and l.id <> $2
-       and (b.on_hand - b.reserved - b.allocated - b.damaged) > 0
+     group by l.code, l.name
+    having sum(b.on_hand - b.reserved - b.allocated - b.damaged) > 0
      order by 3 desc`, [p.id, loc.id])).rows : [];
 
   return {

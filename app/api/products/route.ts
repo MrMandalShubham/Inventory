@@ -34,7 +34,7 @@ export const GET = storefrontRoute("catalog:read", async (ctx, req) => {
 
            -- What may be PROMISED, not what is on the shelf: stock
            -- already held for somebody else's order is not for sale.
-           coalesce(b.on_hand - b.reserved - b.allocated - b.damaged, 0) as available,
+           b.free as available,
 
            -- Cost is shaped out again unless the key holds cost:read.
            b.weighted_avg_cost as cost_paise,
@@ -43,8 +43,22 @@ export const GET = storefrontRoute("catalog:read", async (ctx, req) => {
       from catalog.product p
       join catalog.uom u on u.id = p.base_uom_id
       left join lateral catalog.price_for(p.id, $1::uuid) pr on true
-      left join stock.balance b
-             on b.product_id = p.id and b.location_id = $1::uuid and b.batch_id is null
+      -- Availability is the sum across EVERY balance row for this
+      -- product here: the batch-less row and every lot. Migration 0054
+      -- moved lot-tracked stock into lots, and a join pinned to
+      -- `batch_id is null` then matched nothing and reported zero —
+      -- which showed 84 of 118 products as out of stock on a live
+      -- storefront. Cost is quantity-weighted across the lots, because
+      -- averaging the averages would weight a lot of 2 like a lot of 900.
+      left join lateral (
+        select coalesce(sum(x.on_hand - x.reserved - x.allocated - x.damaged), 0)::int
+                 as free,
+               case when coalesce(sum(x.on_hand), 0) > 0
+                    then sum(x.on_hand * x.weighted_avg_cost) / sum(x.on_hand)
+                    else max(x.weighted_avg_cost) end as weighted_avg_cost
+          from stock.balance x
+         where x.product_id = p.id and x.location_id = $1::uuid
+      ) b on true
       left join catalog.product_image img
              on img.product_id = p.id and img.is_primary
      where p.status = 'ACTIVE'
@@ -52,8 +66,7 @@ export const GET = storefrontRoute("catalog:read", async (ctx, req) => {
        and ($3::text is null
             or p.name ilike '%' || $3 || '%'
             or p.sku_code ilike '%' || $3 || '%')
-       and (not $4::boolean
-            or coalesce(b.on_hand - b.reserved - b.allocated - b.damaged, 0) > 0)
+       and (not $4::boolean or b.free > 0)
      order by p.name
      limit $5 offset $6`,
     [loc?.id ?? null, category, search, inStock, limit, offset]);

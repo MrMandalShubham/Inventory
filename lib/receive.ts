@@ -87,9 +87,19 @@ export async function searchProducts(
            coalesce(b.on_hand, 0) as on_hand
       from catalog.product p
       join catalog.uom u on u.id = p.base_uom_id
-      left join stock.balance b
-             on b.product_id = p.id and b.batch_id is null
-            and ($2::uuid is null or b.location_id = $2)
+      -- Every balance row, not only the batch-less one. Since 0054
+      -- lot-tracked stock lives in lots, and pinning to
+      -- `batch_id is null` would show the receiving screen a zero for
+      -- stock that is plainly on the shelf.
+      left join lateral (
+        select coalesce(sum(x.on_hand), 0)::int as on_hand,
+               case when coalesce(sum(x.on_hand), 0) > 0
+                    then sum(x.on_hand * x.weighted_avg_cost) / sum(x.on_hand)
+                    else max(x.weighted_avg_cost) end as weighted_avg_cost
+          from stock.balance x
+         where x.product_id = p.id
+           and ($2::uuid is null or x.location_id = $2)
+      ) b on true
      where p.status = 'ACTIVE'
        and ($1 = '' or p.name ilike '%' || $1 || '%' or p.sku_code ilike '%' || $1 || '%')
      order by (p.name ilike $1 || '%') desc, p.name
@@ -143,8 +153,14 @@ export async function receiveBatch(
     const { rows: [p] } = await c.query(`
       select p.id, p.sku_code, p.name, p.pack_size, p.tracking_mode, p.shelf_life_days,
              u.code as base_uom,
-             (select b.weighted_avg_cost from stock.balance b
-               where b.product_id = p.id and b.location_id = $2 and b.batch_id is null) as wac
+             -- Quantity-weighted across every lot at this location.
+             -- Averaging the averages would weight a lot of 2 the same
+             -- as a lot of 900.
+             (select case when coalesce(sum(b.on_hand), 0) > 0
+                          then sum(b.on_hand * b.weighted_avg_cost) / sum(b.on_hand)
+                          else max(b.weighted_avg_cost) end
+                from stock.balance b
+               where b.product_id = p.id and b.location_id = $2) as wac
         from catalog.product p
         join catalog.uom u on u.id = p.base_uom_id
        where p.id = $1 and p.status = 'ACTIVE'`, [line.product_id, input.locationId]);
