@@ -46,7 +46,7 @@ export const GET = storefrontRoute("catalog:read", async (ctx, req) => {
       -- Availability is the sum across EVERY balance row for this
       -- product here: the batch-less row and every lot. Migration 0054
       -- moved lot-tracked stock into lots, and a join pinned to
-      -- `batch_id is null` then matched nothing and reported zero —
+      -- "batch_id is null" then matched nothing and reported zero —
       -- which showed 84 of 118 products as out of stock on a live
       -- storefront. Cost is quantity-weighted across the lots, because
       -- averaging the averages would weight a lot of 2 like a lot of 900.

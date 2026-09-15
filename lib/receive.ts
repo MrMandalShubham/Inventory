@@ -89,7 +89,7 @@ export async function searchProducts(
       join catalog.uom u on u.id = p.base_uom_id
       -- Every balance row, not only the batch-less one. Since 0054
       -- lot-tracked stock lives in lots, and pinning to
-      -- `batch_id is null` would show the receiving screen a zero for
+      -- "batch_id is null" would show the receiving screen a zero for
       -- stock that is plainly on the shelf.
       left join lateral (
         select coalesce(sum(x.on_hand), 0)::int as on_hand,
