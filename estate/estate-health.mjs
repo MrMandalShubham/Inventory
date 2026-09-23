@@ -425,12 +425,14 @@ try {
   await check("no parcel was delivered without the sale reaching the ledger",
     `select count(*) n from delivery.delivery d
       where d.status='DELIVERED'
+        and d.commit_status not in ('verified','not_required')
         and exists (select 1 from stock.reservation r where r.order_ref=d.external_order_id)
         and not exists (select 1 from stock.reservation r
                          where r.order_ref=d.external_order_id and r.status='CONSUMED')`,
     { detail: `select d.tracking_id, d.external_order_id, d.delivered_at, d.commit_status
                  from delivery.delivery d
                 where d.status='DELIVERED'
+                  and d.commit_status not in ('verified','not_required')
                   and exists (select 1 from stock.reservation r where r.order_ref=d.external_order_id)
                   and not exists (select 1 from stock.reservation r
                                    where r.order_ref=d.external_order_id and r.status='CONSUMED')

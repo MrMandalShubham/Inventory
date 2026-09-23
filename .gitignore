@@ -36,3 +36,4 @@ Thumbs.db
 # Scratch files. Anything named *.tmp.* is a probe, never a deliverable.
 *.tmp.mjs
 *.tmp.js
+estate/.dbenv
